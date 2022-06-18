@@ -1,6 +1,6 @@
-package com.example.demo.persistence.repository;
+package com.example.demo.loanManagement.parsistence.repositories;
 
-import com.example.demo.model.LoanStates;
+import com.example.demo.loanManagement.parsistence.models.LoanStates;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

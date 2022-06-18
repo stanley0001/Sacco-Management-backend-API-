@@ -1,11 +1,11 @@
-package com.example.demo.controllers;
+package com.example.demo.communication.controllers;
 
-import com.example.demo.model.ContactBook;
-import com.example.demo.model.ContactList;
-import com.example.demo.model.Email;
-import com.example.demo.model.messageTemplates;
-import com.example.demo.model.models.ContactListUpload;
-import com.example.demo.services.CommunicationService;
+import com.example.demo.communication.parsitence.models.ContactBook;
+import com.example.demo.communication.parsitence.models.ContactList;
+import com.example.demo.communication.parsitence.models.Email;
+import com.example.demo.communication.parsitence.models.messageTemplates;
+import com.example.demo.communication.parsitence.models.ContactListUpload;
+import com.example.demo.communication.services.CommunicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

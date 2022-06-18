@@ -1,4 +1,4 @@
-package com.example.demo.services.communication;
+package com.example.demo.communication.services;
 
 import com.africastalking.AfricasTalking;
 import com.africastalking.SmsService;

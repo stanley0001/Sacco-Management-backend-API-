@@ -1,7 +1,4 @@
-package com.example.demo.model.models;
-
-import com.example.demo.model.Charges;
-import com.example.demo.model.Products;
+package com.example.demo.loanManagement.parsistence.models;
 
 import java.util.List;
 

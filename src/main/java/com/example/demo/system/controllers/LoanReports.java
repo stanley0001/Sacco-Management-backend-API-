@@ -1,8 +1,8 @@
-package com.example.demo.controllers.Reports;
+package com.example.demo.system.controllers;
 
-import com.example.demo.model.models.SearchBody;
-import com.example.demo.model.models.SearchReportResponse;
-import com.example.demo.services.ReportService;
+import com.example.demo.system.parsitence.models.SearchBody;
+import com.example.demo.system.parsitence.models.SearchReportResponse;
+import com.example.demo.system.services.ReportService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

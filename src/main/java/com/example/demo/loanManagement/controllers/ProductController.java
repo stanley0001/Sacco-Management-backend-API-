@@ -1,14 +1,14 @@
-package com.example.demo.controllers;
+package com.example.demo.loanManagement.controllers;
 
-import com.example.demo.model.AccountModified;
-import com.example.demo.model.Charges;
-import com.example.demo.model.LoanAccount;
-import com.example.demo.model.Products;
-import com.example.demo.model.models.productCreation;
-import com.example.demo.services.ChargeServiceImpl;
-import com.example.demo.services.LoanAccountService;
-import com.example.demo.services.ProductService;
-import com.example.demo.services.bps.Bps;
+import com.example.demo.loanManagement.parsistence.models.AccountModified;
+import com.example.demo.loanManagement.parsistence.models.Charges;
+import com.example.demo.loanManagement.parsistence.models.LoanAccount;
+import com.example.demo.loanManagement.parsistence.models.Products;
+import com.example.demo.loanManagement.parsistence.models.productCreation;
+import com.example.demo.loanManagement.services.ChargeServiceImpl;
+import com.example.demo.loanManagement.services.LoanAccountService;
+import com.example.demo.loanManagement.services.ProductService;
+import com.example.demo.system.services.Bps;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

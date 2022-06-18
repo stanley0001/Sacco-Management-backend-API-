@@ -1,2 +1,26 @@
-package com.example.demo.customerManagement.services;public interface CustomerService {
+package com.example.demo.customerManagement.services;
+
+import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.customerManagement.parsistence.models.ClientInfo;
+import com.example.demo.system.parsitence.models.ResponseModel;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public interface CustomerS {
+    Customer saveCustomer(Customer customer);
+
+    List<Customer> findAll();
+
+    ClientInfo findById(Long id);
+
+    Optional<Customer> findByPhone(String phone);
+
+    Customer update(Customer customer);
+
+    void changeStatus(Long id, String status);
+
+    ResponseModel enableClientLogin(Long id);
 }

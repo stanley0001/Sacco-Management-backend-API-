@@ -1,4 +1,4 @@
-package com.example.demo.persistence.entities;
+package com.example.demo.userManagements.parsitence.enitities;
 
 import javax.persistence.*;
 import java.time.LocalDate;

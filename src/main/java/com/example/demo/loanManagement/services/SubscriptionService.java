@@ -1,6 +1,6 @@
-package com.example.demo.services;
+package com.example.demo.loanManagement.services;
 
-import com.example.demo.customerManagement.parsistence.models.Customer;
+import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.loanManagement.parsistence.models.Products;
 import com.example.demo.loanManagement.parsistence.models.Subscriptions;
 import com.example.demo.customerManagement.parsistence.repositories.CustomerRepo;

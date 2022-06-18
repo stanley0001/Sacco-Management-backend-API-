@@ -1,4 +1,5 @@
-FROM openjdk:8-jdk-alpine
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} app.jar
-ENTRYPOINT ["java","-jar","/app.jar"]
+FROM fabric8/java-alpine-openjdk11-jre
+MAINTAINER stan
+COPY target/*.jar /alpha.jar
+# set the startup command to execute the jar
+ENTRYPOINT ["java","-jar","/alpha.jar"]

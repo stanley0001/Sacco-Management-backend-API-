@@ -1,6 +1,4 @@
-package com.example.demo.model.models;
-
-import com.example.demo.model.ContactList;
+package com.example.demo.communication.parsitence.models;
 
 import java.util.List;
 

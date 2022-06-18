@@ -1,4 +1,4 @@
-package com.example.demo.model.models;
+package com.example.demo.system.parsitence.models;
 
 public class ReportComponent {
     private Integer[] ChartLabel;

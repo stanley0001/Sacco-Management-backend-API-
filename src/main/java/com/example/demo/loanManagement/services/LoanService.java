@@ -1,11 +1,16 @@
-package com.example.demo.services;
+package com.example.demo.loanManagement.services;
 
 import com.example.demo.communication.parsitence.models.Email;
-import com.example.demo.customerManagement.parsistence.models.Customer;
+import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.loanManagement.parsistence.models.*;
 import com.example.demo.loanManagement.parsistence.repositories.ApplicationRepo;
 import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
 import com.example.demo.loanManagement.parsistence.repositories.TransactionsRepo;
+import com.example.demo.communication.services.CommunicationService;
+import com.example.demo.customerManagement.serviceImplimentations.CustomerService;
+import com.example.demo.banking.services.Dispatcher;
+import com.example.demo.system.services.InternalChecks;
+import com.example.demo.system.services.Backbone;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 

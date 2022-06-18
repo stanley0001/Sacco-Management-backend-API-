@@ -1,4 +1,4 @@
-package com.example.demo.model.models;
+package com.example.demo.userManagements.parsitence.models;
 
 public class Reset {
     private String email;

@@ -1,4 +1,4 @@
-package com.example.demo.customerManagement.parsistence.models;
+package com.example.demo.customerManagement.parsistence.entities;
 
 import com.example.demo.banking.parsitence.enitities.BankAccounts;
 import lombok.Getter;
@@ -21,21 +21,33 @@ public class Customer implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String firstName;
+    private String middleName;
     private String lastName;
-    private String sirName;
     private Float accountBalance;
+    private String documentType;
     private String documentNumber;
-    private String externalId;
-    private String occupation;
-    private String address;
     private LocalDate dob;
+    private String  employmentType;
+    private String maritalStatus;
+    private String occupation;
+    private Float salary;
+    @Column(unique = true)
+    private String externalId;
+    private LocalDate externalStartDate;
+    private String address;
+    private String AccountStatus;
+    private Boolean status;
+    private String nextOfKin;
+    private String nextOfKinRelationship;
+    private String nextOfKinDocumentNumber;
+    private String nextOfKinPhone;
     @Column(unique = true,nullable = false)
     private String phoneNumber;
     private String email;
     private String altPhoneNumber;
     private String createdBy;
-    private Boolean status;
-    private LocalDate externalStartDate;
+    private String referredBy;
+    private String branchCode;
     private LocalDate createdAt;
     private LocalDate updatedAt;
     @OneToMany
@@ -48,41 +60,66 @@ public class Customer implements Serializable {
         this.id = id;
     }
 
-    public Customer(String firstName, String lastName, Float accountBalance, String email, Boolean status, String documentNumber, String externalId, String occupation, String address, LocalDate dob, String phoneNumber, String altPhoneNumber, String createdBy, LocalDate externalStartDate, LocalDate createdAt, LocalDate updatedAt) {
+    public Customer(String firstName, String middleName, String lastName, Float accountBalance, String documentType, String documentNumber, LocalDate dob, String employmentType, String maritalStatus, String occupation, Float salary, String externalId, LocalDate externalStartDate, String address, String accountStatus, Boolean status, String nextOfKin, String nextOfKinRelationship, String nextOfKinDocumentNumber, String nextOfKinPhone, String phoneNumber, String email, String altPhoneNumber, String createdBy, String referredBy, String branchCode, LocalDate createdAt, LocalDate updatedAt, List<BankAccounts> bankAccounts) {
         this.firstName = firstName;
+        this.middleName = middleName;
         this.lastName = lastName;
         this.accountBalance = accountBalance;
+        this.documentType = documentType;
         this.documentNumber = documentNumber;
-        this.externalId = externalId;
-        this.occupation = occupation;
-        this.address = address;
         this.dob = dob;
-        this.phoneNumber = phoneNumber;
-        this.altPhoneNumber = altPhoneNumber;
-        this.createdBy = createdBy;
+        this.employmentType = employmentType;
+        this.maritalStatus = maritalStatus;
+        this.occupation = occupation;
+        this.salary = salary;
+        this.externalId = externalId;
         this.externalStartDate = externalStartDate;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.email =email;
-        this.status =status;
-    }
-
-    public Customer(Long id, String firstName, String lastName, Float accountBalance, String documentNumber, String externalId, String occupation, String address, LocalDate dob, String phoneNumber, String email, String altPhoneNumber, String createdBy, Boolean status, LocalDate externalStartDate, LocalDate createdAt, LocalDate updatedAt, List<BankAccounts> bankAccounts) {
-        this.id = id;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.accountBalance = accountBalance;
-        this.documentNumber = documentNumber;
-        this.externalId = externalId;
-        this.occupation = occupation;
         this.address = address;
-        this.dob = dob;
+        AccountStatus = accountStatus;
+        this.status = status;
+        this.nextOfKin = nextOfKin;
+        this.nextOfKinRelationship = nextOfKinRelationship;
+        this.nextOfKinDocumentNumber = nextOfKinDocumentNumber;
+        this.nextOfKinPhone = nextOfKinPhone;
         this.phoneNumber = phoneNumber;
         this.email = email;
         this.altPhoneNumber = altPhoneNumber;
         this.createdBy = createdBy;
-        this.status = status;
+        this.referredBy = referredBy;
+        this.branchCode = branchCode;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.bankAccounts = bankAccounts;
+    }
+
+    public Customer(Long id, String firstName, String middleName, String lastName, Float accountBalance, String documentType, String documentNumber, LocalDate dob, String employmentType, String maritalStatus, String occupation, Float salary, String externalId, LocalDate externalStartDate, String address, String accountStatus, Boolean status, String nextOfKin, String nextOfKinRelationship, String nextOfKinDocumentNumber, String nextOfKinPhone, String phoneNumber, String email, String altPhoneNumber, String createdBy, String referredBy, String branchCode, LocalDate createdAt, LocalDate updatedAt, List<BankAccounts> bankAccounts) {
+        this.id = id;
+        this.firstName = firstName;
+        this.middleName = middleName;
+        this.lastName = lastName;
+        this.accountBalance = accountBalance;
+        this.documentType = documentType;
+        this.documentNumber = documentNumber;
+        this.dob = dob;
+        this.employmentType = employmentType;
+        this.maritalStatus = maritalStatus;
+        this.occupation = occupation;
+        this.salary = salary;
+        this.externalId = externalId;
         this.externalStartDate = externalStartDate;
+        this.address = address;
+        AccountStatus = accountStatus;
+        this.status = status;
+        this.nextOfKin = nextOfKin;
+        this.nextOfKinRelationship = nextOfKinRelationship;
+        this.nextOfKinDocumentNumber = nextOfKinDocumentNumber;
+        this.nextOfKinPhone = nextOfKinPhone;
+        this.phoneNumber = phoneNumber;
+        this.email = email;
+        this.altPhoneNumber = altPhoneNumber;
+        this.createdBy = createdBy;
+        this.referredBy = referredBy;
+        this.branchCode = branchCode;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.bankAccounts = bankAccounts;
@@ -93,24 +130,34 @@ public class Customer implements Serializable {
         return "Customer{" +
                 "id=" + id +
                 ", firstName='" + firstName + '\'' +
+                ", middleName='" + middleName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", accountBalance=" + accountBalance +
+                ", documentType='" + documentType + '\'' +
                 ", documentNumber='" + documentNumber + '\'' +
-                ", externalId='" + externalId + '\'' +
-                ", occupation='" + occupation + '\'' +
-                ", address='" + address + '\'' +
                 ", dob=" + dob +
+                ", employmentType='" + employmentType + '\'' +
+                ", maritalStatus='" + maritalStatus + '\'' +
+                ", occupation='" + occupation + '\'' +
+                ", salary=" + salary +
+                ", externalId='" + externalId + '\'' +
+                ", externalStartDate=" + externalStartDate +
+                ", address='" + address + '\'' +
+                ", AccountStatus='" + AccountStatus + '\'' +
+                ", status=" + status +
+                ", nextOfKin='" + nextOfKin + '\'' +
+                ", nextOfKinRelationship='" + nextOfKinRelationship + '\'' +
+                ", nextOfKinDocumentNumber='" + nextOfKinDocumentNumber + '\'' +
+                ", nextOfKinPhone='" + nextOfKinPhone + '\'' +
                 ", phoneNumber='" + phoneNumber + '\'' +
                 ", email='" + email + '\'' +
                 ", altPhoneNumber='" + altPhoneNumber + '\'' +
                 ", createdBy='" + createdBy + '\'' +
-                ", status=" + status +
-                ", externalStartDate=" + externalStartDate +
+                ", referredBy='" + referredBy + '\'' +
+                ", branchCode='" + branchCode + '\'' +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 ", bankAccounts=" + bankAccounts +
                 '}';
     }
-
-
 }

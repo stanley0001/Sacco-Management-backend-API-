@@ -1,4 +1,4 @@
-package com.example.demo.model.models;
+package com.example.demo.customerManagement.parsistence.models;
 
 import lombok.Getter;
 import lombok.Setter;

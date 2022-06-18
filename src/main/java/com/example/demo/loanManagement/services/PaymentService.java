@@ -1,15 +1,17 @@
-package com.example.demo.services;
+package com.example.demo.loanManagement.services;
 
-import com.example.demo.customerManagement.parsistence.models.Customer;
+import com.example.demo.banking.parsitence.repositories.PaymentRepo;
+import com.example.demo.banking.services.Dispatcher;
+import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.customerManagement.serviceImplimentations.CustomerService;
 import com.example.demo.loanManagement.parsistence.models.LoanAccount;
 import com.example.demo.loanManagement.parsistence.models.PaymentRequest;
-import com.example.demo.loanManagement.parsistence.models.Payments;
+import com.example.demo.banking.parsitence.enitities.Payments;
 import com.example.demo.loanManagement.parsistence.models.SuspensePayments;
 import com.example.demo.loanManagement.parsistence.repositories.*;
 import com.example.demo.system.parsitence.repositories.ScheduleRepo;
+import com.example.demo.system.services.Backbone;
 import lombok.extern.log4j.Log4j2;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -51,7 +53,6 @@ public String paymentRef="";
                 //save payment
                 paymentRes.setStatus("PROCESSED");
                 paymentRes.setDestinationAccount(paymentRes.getAccountNumber());
-                paymentRes.setLoanNumber("");
                 paymentRepo.save(paymentRes);
                 //getCurrentLoan
                 String currentLoan="";
@@ -167,68 +168,4 @@ public void saveSuspensePayment(SuspensePayments payment){suspensePaymentRepo.sa
        }
     }
 
-
-    @Async
-    public void processCallBack(JSONObject jsonObject) {
-        //
-        if (jsonObject.has("Body")){
-        if (jsonObject.getJSONObject("Body").has("stkCallback")){
-            log.info("Processing stk callback. ..");
-            String stkDescription=jsonObject.getJSONObject("Body").getJSONObject("stkCallback").get("ResultDesc").toString();
-            int stkCode=jsonObject.getJSONObject("Body").getJSONObject("stkCallback").getInt("ResultCode");
-
-            //checking for success callbacks
-            if (stkCode == 0){
-                log.info("success stk.. code: {}, Description: {}",stkCode,stkDescription);
-                //map data models
-
-                JSONArray items=jsonObject.getJSONObject("Body").getJSONObject("stkCallback").getJSONObject("CallbackMetadata").getJSONArray("Item");
-
-                int i;
-                Payments payment = new Payments();
-                for (i=0; i<items.length(); i++){
-
-
-                    log.info(items.getJSONObject(i).get("Name"));
-                    if (items.getJSONObject(i).get("Name").toString().equals("PhoneNumber")){
-                        payment.setAccountNumber(items.getJSONObject(i).get("Value").toString());
-                    }
-                    if (items.getJSONObject(i).get("Name").toString().equals("Amount")){
-                        payment.setAmount(items.getJSONObject(i).get("Value").toString());
-                    }
-                    if (items.getJSONObject(i).get("Name").toString().equals("MpesaReceiptNumber")){
-                        payment.setOtherRef(items.getJSONObject(i).get("Value").toString());
-                    }
-                }
-                payment.setPaymentTime(LocalDateTime.now());
-                log.info(payment);
-                processLoanPayment(payment);
-                //
-                // save model
-                //
-                // Verify transaction
-
-                // update model
-                //
-                // process
-
-            }else {
-                log.info("failed stk.. code: {}, Description: {}",stkCode,stkDescription);
-                //map data models
-                //
-                // save
-            }
-
-
-        }
-         }
-         //
-        if (jsonObject.has("Result")){
-            if (jsonObject.getJSONObject("Result").has("ResultParameters")){
-                log.info("processing other callback ....");
-
-            }
-        }
-
-    }
 }

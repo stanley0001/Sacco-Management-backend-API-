@@ -1,6 +1,6 @@
-package com.example.demo.persistence.repository;
+package com.example.demo.userManagements.parsitence.repositories;
 
-import com.example.demo.persistence.entities.Users;
+import com.example.demo.userManagements.parsitence.enitities.Users;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

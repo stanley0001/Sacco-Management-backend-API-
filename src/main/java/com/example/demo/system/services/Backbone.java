@@ -1,4 +1,4 @@
-package com.example.demo.services;
+package com.example.demo.system.services;
 
 import com.example.demo.system.parsitence.models.Schedule.Schedule;
 import com.example.demo.loanManagement.parsistence.models.loanTransactions;

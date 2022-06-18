@@ -1,4 +1,4 @@
-package com.example.demo.configuration;
+package com.example.demo.system.configuration;
 
 import javax.mail.*;
 import javax.mail.internet.*;

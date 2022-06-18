@@ -1,4 +1,4 @@
-package com.example.demo.services;
+package com.example.demo.loanManagement.services;
 
 import com.example.demo.loanManagement.parsistence.models.Charges;
 import com.example.demo.loanManagement.parsistence.repositories.ChargesRepo;

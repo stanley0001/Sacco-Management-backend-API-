@@ -1,17 +1,27 @@
-package com.example.demo.configuration;
+package com.example.demo.system.configuration;
 
+import org.springframework.boot.web.server.ErrorPage;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.http.HttpStatus;
 
 @Configuration
-public class MvcConfig implements WebMvcConfigurer {
-
-    public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/home").setViewName("home");
-        registry.addViewController("/").setViewName("home");
-        registry.addViewController("/hello").setViewName("hello");
-        registry.addViewController("/login").setViewName("login");
+public class MvcConfig {
+    @Bean
+    public WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> containerCustomizer() {
+        return container -> {
+            container.addErrorPages(new ErrorPage(HttpStatus.UNAUTHORIZED,
+                    "/welcome"));
+            container.addErrorPages(new ErrorPage(HttpStatus.NOT_FOUND,
+                    "/welcome"));
+            container.addErrorPages(new ErrorPage(HttpStatus.HTTP_VERSION_NOT_SUPPORTED,
+                    "/welcome"));
+        };
     }
 
+
 }
+
+

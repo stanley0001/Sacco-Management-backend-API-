@@ -1,10 +1,10 @@
-package com.example.demo.services.bps;
+package com.example.demo.system.services;
 
 import com.example.demo.loanManagement.parsistence.models.Charges;
 import com.example.demo.loanManagement.parsistence.models.Products;
 import com.example.demo.loanManagement.parsistence.models.productCreation;
-import com.example.demo.services.ChargeService;
-import com.example.demo.services.ProductService;
+import com.example.demo.loanManagement.services.ChargeService;
+import com.example.demo.loanManagement.services.ProductService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

@@ -1,6 +1,6 @@
-package com.example.demo.persistence.repository.Schedule;
+package com.example.demo.system.parsitence.repositories;
 
-import com.example.demo.model.Schedule.Schedule;
+import com.example.demo.system.parsitence.models.Schedule.Schedule;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;

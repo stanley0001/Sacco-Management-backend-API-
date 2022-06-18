@@ -1,12 +1,16 @@
-package com.example.demo.services;
+package com.example.demo.loanManagement.services;
 
+import com.example.demo.banking.parsitence.repositories.PaymentRepo;
 import com.example.demo.communication.parsitence.models.Email;
-import com.example.demo.customerManagement.parsistence.models.Customer;
+import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.loanManagement.parsistence.models.*;
 import com.example.demo.loanManagement.parsistence.repositories.*;
+import com.example.demo.communication.services.CommunicationService;
+import com.example.demo.customerManagement.serviceImplimentations.CustomerService;
 import com.example.demo.system.parsitence.models.Schedule.Schedule;
 import com.example.demo.customerManagement.parsistence.models.ClientInfo;
 import com.example.demo.system.parsitence.repositories.ScheduleRepo;
+import com.example.demo.system.services.Backbone;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -141,6 +145,9 @@ public class LoanAccountService {
 
     public Optional<LoanAccount> findByCustomerIdAndStatus(String customerId, String status) {
         return loanAccountRepo.findByCustomerIdAndStatusNot(customerId,status);
+    }
+    public Optional<LoanAccount> findLoanAccountByLoanNumber(String loanNumber){
+        return loanAccountRepo.findByLoanref(loanNumber);
     }
     public Optional<LoanAccount> findByCustomerIdAndStatus2(String customerId, String status) {
         return loanAccountRepo.findByCustomerIdAndStatus(customerId,status);

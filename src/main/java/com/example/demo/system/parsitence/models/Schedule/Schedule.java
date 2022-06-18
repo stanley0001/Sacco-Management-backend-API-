@@ -1,4 +1,4 @@
-package com.example.demo.model.Schedule;
+package com.example.demo.system.parsitence.models.Schedule;
 
 import javax.persistence.*;
 import java.io.Serializable;

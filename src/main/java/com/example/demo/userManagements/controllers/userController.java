@@ -1,11 +1,12 @@
-package com.example.demo.controllers;
+package com.example.demo.userManagements.controllers;
 
-import com.example.demo.model.*;
-import com.example.demo.model.models.Reset;
-import com.example.demo.model.models.StatusUpdate;
-import com.example.demo.model.models.changePas;
-import com.example.demo.persistence.entities.Users;
-import com.example.demo.services.userService;
+import com.example.demo.customerManagement.parsistence.models.StatusUpdate;
+import com.example.demo.system.parsitence.models.AuthResponse;
+import com.example.demo.userManagements.parsitence.enitities.Roles;
+import com.example.demo.userManagements.parsitence.enitities.Users;
+import com.example.demo.userManagements.parsitence.enitities.rolePermissions;
+import com.example.demo.userManagements.parsitence.models.*;
+import com.example.demo.userManagements.serviceImplementation.UserService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +22,9 @@ import java.util.Optional;
 @Log4j2
 @RequestMapping("/users")
 public class userController {
-    public userService userService;
+    public UserService userService;
 
-    public userController(com.example.demo.services.userService userService) {
+    public userController(UserService userService) {
         this.userService = userService;
     }
 
@@ -70,21 +71,21 @@ public class userController {
         return new ResponseEntity<>(security1,HttpStatus.CREATED);
         }
         @PostMapping ("/updateStatus")
-        public ResponseEntity<ResponseModel> updateUserStatus(@RequestBody StatusUpdate update){
-           ResponseModel responseModel=userService.changeUserStatus(Long.valueOf(update.getUserId()),update.getStatus());
+        public ResponseEntity<AuthResponse> updateUserStatus(@RequestBody StatusUpdate update){
+           AuthResponse responseModel=userService.changeUserStatus(Long.valueOf(update.getUserId()),update.getStatus());
            return new ResponseEntity<>(responseModel,HttpStatus.OK);
         }
 
 
     @PostMapping("/resetPassword")
-    public ResponseEntity<ResponseModel> resetPassword(@RequestBody Reset email){
-       ResponseModel message=userService.passwordReset(email.getEmail());
+    public ResponseEntity<AuthResponse> resetPassword(@RequestBody Reset email){
+       AuthResponse message=userService.passwordReset(email.getEmail());
        return new ResponseEntity<>(message,HttpStatus.OK);
     }
     @PostMapping("/changePassword")
-    public ResponseEntity<ResponseModel> changePassword(@RequestBody changePas password){
+    public ResponseEntity<AuthResponse> changePassword(@RequestBody changePas password){
         log.info("change password on controller");
-        ResponseModel response=userService.changePassword(password.getUserId().toString(),password.getNewPassword());
+        AuthResponse response=userService.changePassword(password.getUserId().toString(),password.getNewPassword());
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
         @GetMapping("/findPassword{id}")
@@ -100,7 +101,7 @@ public class userController {
         }
 
     @GetMapping("/security/roles")
-    public ResponseEntity<List<Roles>> getAll(){
+    public ResponseEntity<List<Roles>> getAllRoles(){
         List<Roles> roles =userService.getAllRoles();
         return new ResponseEntity<>(roles, HttpStatus.OK);
      }
@@ -109,5 +110,19 @@ public class userController {
         Roles roles = userService.createRole(role);
         return new ResponseEntity<>(roles,HttpStatus.CREATED);
      }
+    @GetMapping("/security/permissions")
+    public ResponseEntity<List<rolePermissions>> getAllPermissions(){
+        List<rolePermissions> permissions =userService.getAllPermissions();
+        return new ResponseEntity<>(permissions, HttpStatus.OK);
+    }
+    @PostMapping("/security/createPermission")
+    public ResponseEntity<rolePermissions> createPermission(@RequestBody rolePermissions permission){
+        rolePermissions createdPermissions = userService.createPermission(permission);
+        return new ResponseEntity<>(createdPermissions,HttpStatus.CREATED);
+    }
+
+
+
+
 
 }

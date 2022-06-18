@@ -1,6 +1,6 @@
-package com.example.demo.persistence.repository;
+package com.example.demo.loanManagement.parsistence.repositories;
 
-import com.example.demo.model.PaymentRequest;
+import com.example.demo.loanManagement.parsistence.models.PaymentRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PaymentRequestRepo extends JpaRepository<PaymentRequest, Long> {

@@ -1,4 +1,4 @@
-package com.example.demo.services;
+package com.example.demo.communication.services;
 
 
 import com.example.demo.communication.parsitence.models.ContactBook;
@@ -11,11 +11,12 @@ import com.example.demo.communication.parsitence.models.singleSmsModel;
 import com.example.demo.communication.parsitence.repositories.ContactBookRepo;
 import com.example.demo.communication.parsitence.repositories.ContactListRepo;
 import com.example.demo.communication.parsitence.repositories.TemplateRepo;
-import com.example.demo.services.communication.InfoBidApiService;
 import com.infobip.ApiException;
 import com.infobip.model.SmsResponse;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 import javax.mail.*;
@@ -26,6 +27,7 @@ import java.util.*;
 
 @Service
 @Log4j2
+@EnableAsync
 public class CommunicationService {
     public final com.example.demo.communication.parsitence.repositories.emailRepo emailRepo;
     public final TemplateRepo templateRepo;
@@ -47,6 +49,7 @@ public class CommunicationService {
 
         theEmail(variable);
     }
+    @Async
     public void getData(String[] data){
      String variable[] = new String[]{
              data[0],"Creation Email","Hi "+data[1]+"\r\n" +
@@ -57,6 +60,7 @@ public class CommunicationService {
  }
 
     //send email
+    @Async
     public void theEmail(String[] variable){
         log.info("saving email....");
         //save Email
@@ -88,6 +92,7 @@ public class CommunicationService {
         }
     });
     //email test
+    @Async
     public void sendmail(String[] variables) throws AddressException, MessagingException, IOException {
 
         props.put("mail.smtp.auth", "true");
@@ -117,6 +122,7 @@ public class CommunicationService {
       Transport.send(msg);
     }
 
+    @Async
     public void resetPassword(String[] data) {
         String variable[] = new String[]{
                 data[0],"Password Reset","Hi "+data[1]+"\r\n" +
@@ -142,12 +148,18 @@ public class CommunicationService {
         return templateRepo.getById(id);
     }
 
+    @Async
     public void sendCustomEmail(Email mail) {
         String variable[] = new String[]{
                 mail.getRecipient(),mail.getMessageType(),mail.getMessage()
         };
 
-        theEmail(variable);
+        try {
+            theEmail(variable);
+        }catch (Exception e){
+            log.warn("Error sending communication: {}",e.getMessage());
+        }
+
 
     }
 
@@ -321,13 +333,15 @@ public class CommunicationService {
                 emailRepo.save(draftSms);
                 log.info("Saving sms");
                 responseList.add(APIResponse);
-                String smsIdR=APIResponse.getMessages().get(0).getMessageId();
-                String bulkIdR=APIResponse.getBulkId();
+                /*String smsIdR=APIResponse.getMessages().get(0).getMessageId();
+                String bulkIdR=APIResponse.getMessages().get(0).getMessageId();
                 if (1==1) {
                     sms.getStatus(bulkIdR, smsIdR, 10);
-                    //draftSms.setStatus(deliveryReports.getResults().get(0).getStatus().getGroupName());
-                    //emailRepo.save(draftSms);
+                    draftSms.setStatus(deliveryReports.getResults().get(0).getStatus().getGroupName());
+                    emailRepo.save(draftSms);
                 }
+
+                */
             }else {
                 log.warn("Api Response is null");
             }

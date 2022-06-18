@@ -1,136 +1,59 @@
-package com.example.demo.loanManagement.parsistence.models;
+package com.example.demo.banking.parsitence.enitities;
+
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-public class loanTransactions  {
+@Getter
+@Setter
+public class Transactions {
     @Id
-    @Column
+    @Column(nullable = false,unique = true,updatable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long transactionId;
     private String transactionType;
-    private String loanRef;
     private String otherRef;
-    private String otherResponses;
-    private String initialBalance;
-    private String finalBalance;
-    private String accountNumber;
+    private Double amount;
+    private Double openingBalance;
+    private Double closingBalance;
     private LocalDateTime transactionTime;
-
-    public loanTransactions() {
+    @ManyToOne
+    private BankAccounts bankAccount;
+    public Transactions() {
     }
 
-    public loanTransactions(Long transactionId) {
+    public Transactions(Long transactionId) {
         this.transactionId = transactionId;
     }
 
-    public loanTransactions(String transactionType, String loanRef, String otherRef, String otherResponses, String initialBalance, String finalBalance, String accountNumber, LocalDateTime transactionTime) {
+    public Transactions(String transactionType, String otherRef, Double openingBalance, Double closingBalance, LocalDateTime transactionTime) {
         this.transactionType = transactionType;
-        this.loanRef = loanRef;
         this.otherRef = otherRef;
-        this.otherResponses = otherResponses;
-        this.initialBalance = initialBalance;
-        this.finalBalance = finalBalance;
-        this.accountNumber = accountNumber;
+        this.openingBalance = openingBalance;
+        this.closingBalance = closingBalance;
         this.transactionTime = transactionTime;
     }
 
-    public loanTransactions(Long transactionId, String transactionType, String loanRef, String otherRef, String otherResponses, String initialBalance, String finalBalance, String accountNumber, LocalDateTime transactionTime) {
+    public Transactions(Long transactionId, String transactionType, String otherRef, Double openingBalance, Double closingBalance, LocalDateTime transactionTime) {
         this.transactionId = transactionId;
         this.transactionType = transactionType;
-        this.loanRef = loanRef;
         this.otherRef = otherRef;
-        this.otherResponses = otherResponses;
-        this.initialBalance = initialBalance;
-        this.finalBalance = finalBalance;
-        this.accountNumber = accountNumber;
-        this.transactionTime = transactionTime;
-    }
-
-    public Long getTransactionId() {
-        return transactionId;
-    }
-
-    public void setTransactionId(Long transactionId) {
-        this.transactionId = transactionId;
-    }
-
-    public String getTransactionType() {
-        return transactionType;
-    }
-
-    public void setTransactionType(String transactionType) {
-        this.transactionType = transactionType;
-    }
-
-    public String getLoanRef() {
-        return loanRef;
-    }
-
-    public void setLoanRef(String loanRef) {
-        this.loanRef = loanRef;
-    }
-
-    public String getOtherRef() {
-        return otherRef;
-    }
-
-    public void setOtherRef(String otherRef) {
-        this.otherRef = otherRef;
-    }
-
-    public String getOtherResponses() {
-        return otherResponses;
-    }
-
-    public void setOtherResponses(String otherResponses) {
-        this.otherResponses = otherResponses;
-    }
-
-    public String getInitialBalance() {
-        return initialBalance;
-    }
-
-    public void setInitialBalance(String initialBalance) {
-        this.initialBalance = initialBalance;
-    }
-
-    public String getFinalBalance() {
-        return finalBalance;
-    }
-
-    public void setFinalBalance(String finalBalance) {
-        this.finalBalance = finalBalance;
-    }
-
-    public String getAccountNumber() {
-        return accountNumber;
-    }
-
-    public void setAccountNumber(String accountNumber) {
-        this.accountNumber = accountNumber;
-    }
-
-    public LocalDateTime getTransactionTime() {
-        return transactionTime;
-    }
-
-    public void setTransactionTime(LocalDateTime transactionTime) {
+        this.openingBalance = openingBalance;
+        this.closingBalance = closingBalance;
         this.transactionTime = transactionTime;
     }
 
     @Override
     public String toString() {
-        return "loanTransactions{" +
+        return "Transactions{" +
                 "transactionId=" + transactionId +
                 ", transactionType='" + transactionType + '\'' +
-                ", loanRef='" + loanRef + '\'' +
                 ", otherRef='" + otherRef + '\'' +
-                ", otherResponses='" + otherResponses + '\'' +
-                ", initialBalance='" + initialBalance + '\'' +
-                ", finalBalance='" + finalBalance + '\'' +
-                ", accountNumber='" + accountNumber + '\'' +
+                ", openingBalance='" + openingBalance + '\'' +
+                ", closingBalance='" + closingBalance + '\'' +
                 ", transactionTime=" + transactionTime +
                 '}';
     }

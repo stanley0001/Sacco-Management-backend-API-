@@ -1,4 +1,4 @@
-package com.example.demo.model.models;
+package com.example.demo.loanManagement.parsistence.models;
 
 public class subscriptionR {
         private String phone;

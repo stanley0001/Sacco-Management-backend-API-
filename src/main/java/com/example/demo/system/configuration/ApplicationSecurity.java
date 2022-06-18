@@ -1,8 +1,8 @@
-package com.example.demo.configuration;
+package com.example.demo.system.configuration;
 
-import com.example.demo.services.auth.CustomAuthenticationFailureHandler;
-import com.example.demo.services.auth.JWTauthFilter;
-import com.example.demo.services.auth.authService;
+import com.example.demo.userManagements.services.auth.CustomAuthenticationFailureHandler;
+import com.example.demo.userManagements.services.auth.JWTauthFilter;
+import com.example.demo.userManagements.services.auth.authService;
 import com.google.inject.internal.util.ImmutableList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -24,9 +24,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-import java.util.List;
-
 @Configuration
 @EnableGlobalMethodSecurity(securedEnabled = true, proxyTargetClass = true)
 @RequiredArgsConstructor
@@ -39,17 +36,20 @@ public class ApplicationSecurity extends WebSecurityConfigurerAdapter {
     private UserDetailsService userDetailsService;
     @Autowired
     private JWTauthFilter jwTauthFilter;
+
     @Bean
-    CorsConfigurationSource corsConfigurationSource()
-    {
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
-        configuration.setAllowedMethods(Arrays.asList("HEAD","GET","POST","PUT","OPTION"));
+        configuration.setAllowedOrigins(ImmutableList.of("*"));
+        configuration.setAllowedMethods(ImmutableList.of("HEAD", "GET", "POST", "PUT"));
+    /* setAllowedHeaders is important! Without it, OPTIONS preflight request
+    will fail with 403 Invalid CORS request */
         configuration.setAllowedHeaders(ImmutableList.of("Authorization", "Cache-Control", "Content-Type", "App-Key"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
     @Override
     protected void configure(HttpSecurity httpSecurity) throws Exception {
         //bypass pre flight request
@@ -58,7 +58,11 @@ public class ApplicationSecurity extends WebSecurityConfigurerAdapter {
         httpSecurity.csrf().disable()
 // dont authenticate this particular request
                 .authorizeRequests().antMatchers("/authenticate",
+                        "/index.html",
+                        "/assets/**",
                 "/users/resetPassword",
+                "/mpesa/**",
+                        "/welcome/**",
                 "/customers/magicListener",
                 "/v2/api-docs",
                 "/configuration/ui",

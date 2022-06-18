@@ -1,4 +1,4 @@
-package com.example.demo.model.models;
+package com.example.demo.communication.parsitence.models;
 
 public class singleSmsModel {
     private String message;

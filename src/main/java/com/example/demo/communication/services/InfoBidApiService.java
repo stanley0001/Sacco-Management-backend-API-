@@ -1,4 +1,4 @@
-package com.example.demo.services.communication;
+package com.example.demo.communication.services;
 
 import com.example.demo.communication.parsitence.models.singleSmsModel;
 import com.infobip.ApiClient;
@@ -21,16 +21,23 @@ public class InfoBidApiService {
 
     //API Documentation  https://github.com/infobip/infobip-api-java-client
     public void auth() {
+        log.info("Infobip auth ..");
         ApiClient apiClient = new ApiClient();
         apiClient.setApiKeyPrefix("App");
-        apiClient.setApiKey("f5fb33bf687d5e002e5030efbe1011b6-d42c6fab-7b83-4b13-a20b-19980bf956a4");
-        apiClient.setBasePath("https://lz12x2.api.infobip.com");
+        apiClient.setApiKey("efefc803db3050b38668f95f4d2c3d7f-f2b92714-10fb-43f5-9b62-80d9600a86f1");
+        apiClient.setBasePath("https://yrx881.api.infobip.com");
         Configuration.setDefaultApiClient(apiClient);
     }
 
 
     public SmsResponse send1(singleSmsModel customSms) {
-        this.auth();
+        log.info("Infobip sending ..");
+        try {
+            this.auth();
+        }catch (Exception e){
+            log.warn("Error authenticating Infobip: {}",e.getMessage());
+        }
+
 
         SendSmsApi sendSmsApi = new SendSmsApi();
         SmsResponse response = null;

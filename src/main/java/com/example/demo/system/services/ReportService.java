@@ -1,13 +1,13 @@
-package com.example.demo.services;
+package com.example.demo.system.services;
 
-import com.example.demo.customerManagement.parsistence.models.Customer;
+import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.loanManagement.parsistence.models.LoanAccount;
-import com.example.demo.loanManagement.parsistence.models.Payments;
+import com.example.demo.banking.parsitence.enitities.Payments;
 import com.example.demo.loanManagement.parsistence.models.loanApplication;
 import com.example.demo.loanManagement.parsistence.repositories.ApplicationRepo;
 import com.example.demo.customerManagement.parsistence.repositories.CustomerRepo;
 import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
-import com.example.demo.loanManagement.parsistence.repositories.PaymentRepo;
+import com.example.demo.banking.parsitence.repositories.PaymentRepo;
 import com.example.demo.system.parsitence.models.*;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
@@ -40,39 +40,32 @@ public class ReportService {
         LocalDateTime localDate1 = LocalDateTime.now().minusHours(24);
         LocalDate localDate = LocalDate.now();
         DashBoardData dashBoardData = new DashBoardData();
-        log.info("finding transactions by {}", localDate1);
        List<LoanAccount> disbursement = loanAccountRepo.findAllByStartDateGreaterThan(localDate1);
-
-       log.info("loan accounts found {}", disbursement);
         List<LoanAccount> totalDefaults = loanAccountRepo.findByStatus("DEFAULT");
         Integer totalDefaultsCount = totalDefaults.size();
-        dashBoardData.setTotalDefaults(totalDefaultsCount.toString());
+        dashBoardData.setTotalDefaults(String.valueOf(totalDefaultsCount));
         Integer amountDisbursed = loanAccountRepo.findAmountByStartDateGreaterThan(localDate1);
         if (amountDisbursed == null) {
             amountDisbursed = 0;
         }
-        log.info("loan amount disbursed {}", amountDisbursed);
         List<Payments> paymentsList = paymentRepo.findAllByPaymentTimeBefore(localDate1);
-        log.info("loan payments found {}", paymentsList);
-        Integer amountPayedIn = 0;
+        Double amountPayedIn = 0.0;
         for (Payments payment : paymentsList
         ) {
-            amountPayedIn += Integer.valueOf(payment.getAmount());
+            amountPayedIn += Double.valueOf(payment.getAmount());
 
         }
-        log.info("amount payed is {}", amountPayedIn);
         List<loanApplication> applicationList = applicationRepo.findByApplicationTime(localDate1);
-        log.info("loan customers found {}", applicationList);
         Integer disbursementCount = disbursement.size();
-        log.info("disbursement count is {}", disbursementCount);
         Integer paymentsCount = paymentsList.size();
-        log.info("Payment count is {}", paymentsCount);
+        Long memberCount=customerRepo.count();
+        dashBoardData.setMembersCount(memberCount);
         Integer leads = 0;
-        dashBoardData.setTotalLeads(leads.toString());
+        dashBoardData.setTotalLeads(String.valueOf(leads));
         dashBoardData.setAmountCollectedToday(amountPayedIn);
         dashBoardData.setAmountDisbursedToday(amountDisbursed);
-        dashBoardData.setDisbursementToday(disbursementCount.toString());
-        dashBoardData.setCollectionToday(paymentsCount.toString());
+        dashBoardData.setDisbursementToday(String.valueOf(disbursementCount));
+        dashBoardData.setCollectionToday(String.valueOf(paymentsCount));
         dashBoardData.setApplicationsToday(applicationList);
 
         return dashBoardData;

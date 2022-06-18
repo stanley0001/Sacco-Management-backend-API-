@@ -1,7 +1,7 @@
-package com.example.demo.model.models;
+package com.example.demo.system.parsitence.models;
 
-import com.example.demo.model.Customer;
-import com.example.demo.model.LoanAccount;
+import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.loanManagement.parsistence.models.LoanAccount;
 
 public class SReportData {
     private Customer client;

@@ -1,6 +1,9 @@
-package com.example.demo.services;
+package com.example.demo.banking.services;
 
 import com.example.demo.loanManagement.parsistence.models.Disbursements;
+import com.example.demo.loanManagement.services.DisbursementService;
+import com.example.demo.system.services.InternalChecks;
+import com.example.demo.userManagements.serviceImplementation.UserService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -8,11 +11,11 @@ import java.time.LocalDateTime;
 @Service
 public class Dispatcher {
 public final DisbursementService disbursementService;
-public final userService userService;
+public final UserService userService;
 public final InternalChecks internalChecks;
 
 
-    public Dispatcher(DisbursementService disbursementService, com.example.demo.services.userService userService, InternalChecks internalChecks) {
+    public Dispatcher(DisbursementService disbursementService, UserService userService, InternalChecks internalChecks) {
         this.disbursementService = disbursementService;
         this.userService = userService;
         this.internalChecks = internalChecks;

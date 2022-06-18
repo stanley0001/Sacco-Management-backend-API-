@@ -1,9 +1,13 @@
-package com.example.demo.services;
+package com.example.demo.system.services;
 
+import com.example.demo.customerManagement.serviceImplimentations.CustomerService;
 import com.example.demo.loanManagement.parsistence.models.Disbursements;
 import com.example.demo.loanManagement.parsistence.models.LoanAccount;
 import com.example.demo.loanManagement.parsistence.models.Products;
 import com.example.demo.loanManagement.parsistence.models.Subscriptions;
+import com.example.demo.loanManagement.services.LoanAccountService;
+import com.example.demo.loanManagement.services.ProductService;
+import com.example.demo.loanManagement.services.SubscriptionService;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

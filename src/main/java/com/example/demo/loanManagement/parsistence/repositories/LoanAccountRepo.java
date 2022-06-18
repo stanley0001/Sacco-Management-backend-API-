@@ -1,6 +1,6 @@
-package com.example.demo.persistence.repository;
+package com.example.demo.loanManagement.parsistence.repositories;
 
-import com.example.demo.model.LoanAccount;
+import com.example.demo.loanManagement.parsistence.models.LoanAccount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,4 +37,6 @@ public interface LoanAccountRepo extends JpaRepository<LoanAccount, Long> {
 
     @Query("select l from  LoanAccount l where l.startDate between :from and :to and l.status=:status")
     List<LoanAccount> findAmountByStartDateAndStatus(@Param("from") LocalDateTime from,@Param("to") LocalDateTime to, @Param("status") String status);
+
+    Optional<LoanAccount> findByLoanref(String loanNumber);
 }

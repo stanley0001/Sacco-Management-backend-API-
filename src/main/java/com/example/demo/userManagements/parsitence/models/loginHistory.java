@@ -1,4 +1,4 @@
-package com.example.demo.model;
+package com.example.demo.userManagements.parsitence.models;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;

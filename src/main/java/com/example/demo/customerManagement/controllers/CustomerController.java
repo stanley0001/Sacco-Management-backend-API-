@@ -1,17 +1,27 @@
-package com.example.demo.controllers;
+package com.example.demo.customerManagement.controllers;
 
 import com.africastalking.sms.Recipient;
-import com.example.demo.model.*;
-import com.example.demo.model.models.*;
-import com.example.demo.persistence.entities.Users;
-import com.example.demo.services.*;
-import com.example.demo.services.bps.ScoreService;
-import com.example.demo.services.communication.AfricasTalkingApiService;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.example.demo.banking.parsitence.enitities.Payments;
+import com.example.demo.communication.parsitence.models.bulkSmsModel;
+import com.example.demo.communication.services.AfricasTalkingApiService;
+import com.example.demo.communication.services.CommunicationService;
+import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.customerManagement.parsistence.models.ClientInfo;
+import com.example.demo.customerManagement.services.CustomerS;
+import com.example.demo.loanManagement.parsistence.models.*;
+import com.example.demo.loanManagement.services.LoanAccountService;
+import com.example.demo.loanManagement.services.LoanService;
+import com.example.demo.loanManagement.services.PaymentService;
+import com.example.demo.loanManagement.services.SubscriptionService;
+import com.example.demo.system.parsitence.models.DashBoardData;
+import com.example.demo.system.parsitence.models.ResponseModel;
+import com.example.demo.system.services.ReportService;
+import com.example.demo.system.services.ScoreService;
+import com.example.demo.userManagements.parsitence.enitities.Users;
+import com.example.demo.userManagements.serviceImplementation.UserService;
 import com.infobip.ApiException;
 import com.infobip.model.SmsResponse;
 import lombok.extern.log4j.Log4j2;
-import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,8 +36,8 @@ import java.util.Optional;
 public class CustomerController {
 
     public  final SubscriptionService subscriptions;
-    public final CustomerService customerService;
-    public  final userService userService;
+    public final CustomerS customerService;
+    public  final UserService userService;
     public final LoanService loanService;
     public final PaymentService paymentService;
     public final LoanAccountService loanAccountService;
@@ -36,7 +46,7 @@ public class CustomerController {
     public final AfricasTalkingApiService sms;
     public final CommunicationService communicationService;
 
-    public CustomerController(SubscriptionService subscriptions, CustomerService customerService, com.example.demo.services.userService userService, LoanService loanService, PaymentService paymentService, LoanAccountService loanAccountService, ReportService reportService, ScoreService scoreService, AfricasTalkingApiService sms, CommunicationService communicationService){
+    public CustomerController(SubscriptionService subscriptions, CustomerS customerService, UserService userService, LoanService loanService, PaymentService paymentService, LoanAccountService loanAccountService, ReportService reportService, ScoreService scoreService, AfricasTalkingApiService sms, CommunicationService communicationService) {
         this.subscriptions = subscriptions;
         this.customerService = customerService;
         this.userService = userService;
@@ -48,7 +58,6 @@ public class CustomerController {
         this.sms = sms;
         this.communicationService = communicationService;
     }
-
 
     //creating customers
     @PostMapping("/create")
@@ -89,7 +98,7 @@ public class CustomerController {
     }
     //deactivating customer
     @PutMapping("/changeStatus")
-    public ResponseEntity<Customer> changeStatus(Long id,Boolean status){
+    public ResponseEntity<Customer> changeStatus(Long id,String status){
         customerService.changeStatus(id,status);
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -118,19 +127,16 @@ public class CustomerController {
         paymentService.paymentRequest(phoneNumber,productCode,amount);
         return new ResponseEntity<>(HttpStatus.OK);
     }
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    @PostMapping("/magicListener")
-    public ResponseEntity<?> mpesaListener(@RequestBody String callback) {
-        log.info("Call Back received.. {}",callback);
-        JSONObject jsonObject=new JSONObject(callback);
-
-        paymentService.processCallBack(jsonObject);
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
    @PostMapping("/score")
     public ResponseEntity score(Long id){
         Integer score=scoreService.loadData(id);
         return new ResponseEntity<>(score,HttpStatus.OK);
+    }
+
+    @PostMapping("/enableClientLogin")
+    public ResponseEntity<ResponseModel> enableLogin(Long id){
+        ResponseModel response=customerService.enableClientLogin(id);
+        return new ResponseEntity<>(response,response.getStatus());
     }
     @GetMapping("/dashBoardData")
     public ResponseEntity<DashBoardData> getData(){

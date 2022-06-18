@@ -1,0 +1,2 @@
+package com.example.demo.banking.parsitence.repositories;public interface PaymentTransactionRepo {
+}

@@ -1,15 +1,16 @@
 package com.example.demo.banking.parsitence.enitities;
 
 import com.example.demo.customerManagement.parsistence.entities.Customer;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
 
-@Getter
-@Setter
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
 public class BankAccounts {
     @Id
@@ -23,34 +24,10 @@ public class BankAccounts {
     private Double accountBalance;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    @OneToMany
-    List<Transactions> transactions;
+    /*@OneToMany(fetch = FetchType.LAZY)
+            @JoinColumn(columnDefinition = "transactions_transaction_id")
+    List<Transactions> transactions; */
     @ManyToOne
     private Customer customer;
 
-    public BankAccounts() {
-    }
-
-    public BankAccounts(String bankAccount, String accountDescription, String accountType, Double accountBalance, LocalDateTime createdAt, LocalDateTime updatedAt, List<Transactions> transactions, Customer customer) {
-        this.bankAccount = bankAccount;
-        this.accountDescription = accountDescription;
-        this.accountType = accountType;
-        this.accountBalance = accountBalance;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.transactions = transactions;
-        this.customer = customer;
-    }
-
-    public BankAccounts(Long id, String bankAccount, String accountDescription, String accountType, Double accountBalance, LocalDateTime createdAt, LocalDateTime updatedAt, List<Transactions> transactions, Customer customer) {
-        this.id = id;
-        this.bankAccount = bankAccount;
-        this.accountDescription = accountDescription;
-        this.accountType = accountType;
-        this.accountBalance = accountBalance;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.transactions = transactions;
-        this.customer = customer;
-    }
 }

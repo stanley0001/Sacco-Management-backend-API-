@@ -12,6 +12,8 @@ import com.example.demo.banking.services.Dispatcher;
 import com.example.demo.system.services.InternalChecks;
 import com.example.demo.system.services.Backbone;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
@@ -132,7 +134,81 @@ public class LoanService {
         //update application status
 
     }
+   public ResponseEntity newApplication(newApplication application){
+       log.info("fetching customer");
+       Optional<Customer> customer1=customerService.findByPhone(application.getPhone());
+       if (customer1.isPresent()){
+           Customer customer=customer1.get();
+           Optional<Subscriptions> subscription1=subscriptionService.findCustomerIdandproductCode(customer.getId().toString(),application.getProductCode());
+            if (subscription1.isPresent()){
+                Subscriptions subscription=subscription1.get();
+                email.setRecipient(customer.getEmail());
+                email.setMessageType("Loan Application");
+                loanApplication loanApplication=new loanApplication();
+                loanApplication.setApplicationTime(LocalDateTime.now());
+                loanApplication.setCreditLimit(subscription.getCreditLimit().toString());
+                loanApplication.setCustomerId(customer.getId().toString());
+                loanApplication.setLoanAmount(application.getAmount());
+                loanApplication.setProductCode(subscription.getProductCode());
+                loanApplication.setLoanTerm(subscription.getTerm().toString());
+                loanApplication.setCustomerIdNumber(customer.getDocumentNumber());
+                Long loanNumber=Long.valueOf(new Date().getTime());
+                log.warn(loanNumber);
+                loanApplication.setApplicationStatus("NEW");
+                loanApplication.setInstallments(application.getInstallments());
+                loanApplication.setLoanNumber(loanNumber);
+                loanApplication.setCustomerMobileNumber(application.getPhone());
+                loanApplication.setCustomerId(customer.getId().toString());
+                loanApplication.setDestinationAccount(customer.getPhoneNumber());
+                loanApplication.setDisbursementType("MPESA");
+                loanApplication.setLoanInterest(subscription.getInterestRate().toString());
+                String[] data=new String[]{
+                        subscription.getId().toString(),application.getAmount(),customer.getId().toString()
+                };
+                email.setMessage("Hello "+customer.getFirstName()+" your application of Ksh "+loanApplication.getLoanAmount()+"have bee received please wait as we process your request");
+                communicationService.sendCustomEmail(email);
 
+                if (internalChecks.Productchecks(data).isBlank()){
+                    loanApplication.setApplicationStatus("AUTHORISED");
+                    log.info("saving loan application....");
+                    loanApplication=applicationRepo.save(loanApplication);
+                    //interest application
+                    loanTransactions transaction=interestCalculator(loanApplication);
+                    //create loan account
+                    LoanAccount loanAccount=new LoanAccount();
+                    loanAccount.setApplicationId(loanApplication.getApplicationId());
+                    loanAccount.setAmount(Float.valueOf(loanApplication.getLoanAmount()));
+                    loanAccount.setPayableAmount(Float.valueOf(transaction.getFinalBalance()));
+                    loanAccount.setAccountBalance(Float.valueOf(transaction.getFinalBalance()));
+                    loanAccount.setCustomerId(customer.getId().toString());
+                    loanAccount.setStatus("INIT");
+                    loanAccount.setLoanref(base64encode(loanApplication.getLoanNumber().toString()).toUpperCase());
+                    LoanAccount loanAccount1= loanAccountRepo.save(loanAccount);
+                    //dispatch funds
+                    String[] disbursmentData=new String[]{
+                            loanApplication.getCustomerMobileNumber(),loanApplication.getDestinationAccount(),loanAccount1.getAccountId().toString(),loanApplication.getLoanAmount()
+                    };
+                    email.setMessage("Hello "+customer.getFirstName()+" your application of Ksh "+loanApplication.getLoanAmount()+"have been Approved please wait for find disbursement");
+                    communicationService.sendCustomEmail(email);
+                   /* Disbursements disbursementData=dispatcher.Disburse(disbursmentData);
+                    if(disbursementData.getStatus()=="PROCESSED"){
+                        email.setMessageType("Disbursement");
+                        email.setMessage("Hello "+customer.getFirstName()+" We have disbursed Ksh "+loanApplication.getLoanAmount()+" To your account");
+                        communicationService.sendCustomEmail(email);
+                    }
+                    //save transaction
+                    String[] transactionData=new String[]{
+                            loanApplication.getCustomerMobileNumber(),loanApplication.getLoanNumber().toString(),"Disbursement",disbursementData.getAmount(),loanAccount.getAccountBalance().toString(),disbursementData.getOtherRef(),disbursementData.getResponse(),application.getCustomerId()
+                    };
+                    backbone.saveTransaction(transactionData);
+*/
+                }
+            }
+           return new ResponseEntity("No Subscription Found",HttpStatus.OK);
+       }
+
+    return new ResponseEntity("No Customer found",HttpStatus.OK);
+   }
     public loanTransactions interestCalculator(loanApplication loan){
         log.info("calculating interest....");
         Float interestRate=Float.valueOf(loan.getLoanInterest())/100;

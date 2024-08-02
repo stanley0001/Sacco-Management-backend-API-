@@ -18,4 +18,6 @@ public interface CustomerRepo extends JpaRepository<Customer, Long> {
 
     @Query("select c from  Customer c where c.createdAt < :date")
     List<Customer> findAllByCreatedAtAfter(@Param("date")LocalDate localDate);
+
+    Customer findByEmail(String recipient);
 }

@@ -32,7 +32,7 @@ public Test test;
 
     public loanTransactions saveTransaction(String[] data){
 //data[0]==accountNumber,data[1]==loanRef,data[2]==transactionType,data[3]==initialBal,data[4]==finalBal,data[5]==otherRef,data[6]==otherResponses
-        log.info(data);
+        log.info("transaction data: {}",data);
         loanTransactions transaction=new loanTransactions();
         transaction.setTransactionTime(LocalDateTime.now());
         transaction.setTransactionType(data[2]);

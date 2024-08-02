@@ -1,14 +1,14 @@
 package com.example.demo.loanManagement.parsistence.models;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Getter
-@Setter
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class loanApplication {
     @Id
     @Column(updatable = false,unique = true,nullable = false)
@@ -34,69 +34,7 @@ public class loanApplication {
     private String productCode;
     private String loanTerm;
     private String loanInterest;
+    private String installments;
     @Column(nullable = false)
     private LocalDateTime applicationTime;
-
-    public loanApplication() {
-    }
-
-    public loanApplication(Long applicationId) {
-        this.applicationId = applicationId;
-    }
-
-    public loanApplication(Long loanNumber, String customerId, String customerIdNumber, String customerMobileNumber, String loanAmount, String creditLimit, String disbursementType, String destinationAccount, String applicationStatus, String productCode, String loanTerm, String loanInterest, LocalDateTime applicationTime) {
-        this.loanNumber = loanNumber;
-        this.customerId = customerId;
-        this.customerIdNumber = customerIdNumber;
-        this.customerMobileNumber = customerMobileNumber;
-        this.loanAmount = loanAmount;
-        this.creditLimit = creditLimit;
-        this.disbursementType = disbursementType;
-        this.destinationAccount = destinationAccount;
-        this.applicationStatus = applicationStatus;
-        this.productCode = productCode;
-        this.loanTerm = loanTerm;
-        this.loanInterest = loanInterest;
-        this.applicationTime = applicationTime;
-    }
-
-    public loanApplication(Long applicationId, Long loanNumber, String customerId, String customerIdNumber, String customerMobileNumber, String loanAmount, String creditLimit, String disbursementType, String destinationAccount, String applicationStatus, String productCode, String loanTerm, String loanInterest, LocalDateTime applicationTime) {
-        this.applicationId = applicationId;
-        this.loanNumber = loanNumber;
-        this.customerId = customerId;
-        this.customerIdNumber = customerIdNumber;
-        this.customerMobileNumber = customerMobileNumber;
-        this.loanAmount = loanAmount;
-        this.creditLimit = creditLimit;
-        this.disbursementType = disbursementType;
-        this.destinationAccount = destinationAccount;
-        this.applicationStatus = applicationStatus;
-        this.productCode = productCode;
-        this.loanTerm = loanTerm;
-        this.loanInterest = loanInterest;
-        this.applicationTime = applicationTime;
-    }
-
-
-    @Override
-    public String toString() {
-        return "loanApplication{" +
-                "applicationId=" + applicationId +
-                ", loanNumber=" + loanNumber +
-                ", customerId='" + customerId + '\'' +
-                ", customerIdNumber='" + customerIdNumber + '\'' +
-                ", customerMobileNumber='" + customerMobileNumber + '\'' +
-                ", loanAmount='" + loanAmount + '\'' +
-                ", creditLimit='" + creditLimit + '\'' +
-                ", disbursementType='" + disbursementType + '\'' +
-                ", destinationAccount='" + destinationAccount + '\'' +
-                ", applicationStatus='" + applicationStatus + '\'' +
-                ", productCode='" + productCode + '\'' +
-                ", loanTerm='" + loanTerm + '\'' +
-                ", loanInterest='" + loanInterest + '\'' +
-                ", applicationTime=" + applicationTime +
-                '}';
-    }
-
-
 }

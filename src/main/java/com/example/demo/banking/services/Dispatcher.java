@@ -91,6 +91,6 @@ public final InternalChecks internalChecks;
     public String random(){
 
         String randomMpesaRef="P1"+userService.randomString()+"4Z";
-        return randomMpesaRef;
+        return randomMpesaRef.toUpperCase();
     }
 }

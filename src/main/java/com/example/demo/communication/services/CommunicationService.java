@@ -1,27 +1,30 @@
 package com.example.demo.communication.services;
 
 
-import com.example.demo.communication.parsitence.models.ContactBook;
-import com.example.demo.communication.parsitence.models.ContactList;
-import com.example.demo.communication.parsitence.models.Email;
-import com.example.demo.communication.parsitence.models.messageTemplates;
-import com.example.demo.communication.parsitence.models.ContactListUpload;
-import com.example.demo.communication.parsitence.models.bulkSmsModel;
-import com.example.demo.communication.parsitence.models.singleSmsModel;
+import com.example.demo.communication.parsitence.models.*;
 import com.example.demo.communication.parsitence.repositories.ContactBookRepo;
 import com.example.demo.communication.parsitence.repositories.ContactListRepo;
 import com.example.demo.communication.parsitence.repositories.TemplateRepo;
+import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.customerManagement.parsistence.repositories.CustomerRepo;
 import com.infobip.ApiException;
 import com.infobip.model.SmsResponse;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.mail.*;
 import javax.mail.internet.*;
 import java.io.IOException;
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -34,13 +37,15 @@ public class CommunicationService {
     public final InfoBidApiService sms;
     public final ContactBookRepo contactBookRepo;
     public final ContactListRepo contactListRepo;
+    public final CustomerRepo customerRepo;
 
-    public CommunicationService(com.example.demo.communication.parsitence.repositories.emailRepo emailRepo, TemplateRepo templateRepo, InfoBidApiService sms, ContactBookRepo contactBookRepo, ContactListRepo contactListRepo) {
+    public CommunicationService(com.example.demo.communication.parsitence.repositories.emailRepo emailRepo, TemplateRepo templateRepo, InfoBidApiService sms, ContactBookRepo contactBookRepo, ContactListRepo contactListRepo, CustomerRepo customerRepo) {
         this.emailRepo = emailRepo;
         this.templateRepo = templateRepo;
         this.sms = sms;
         this.contactBookRepo = contactBookRepo;
         this.contactListRepo = contactListRepo;
+        this.customerRepo = customerRepo;
     }
     public void sendEmail(String[] data){
         String variable[] = new String[]{
@@ -155,7 +160,12 @@ public class CommunicationService {
         };
 
         try {
-            theEmail(variable);
+           // theEmail(variable);
+            //changing email communication to whatsapp communication
+            Customer customer=customerRepo.findByEmail(mail.getRecipient());
+            String requestParams="?instanceId=109266945127952&to="+customer.getPhoneNumber()+"&message="+mail.getMessage();
+            UriComponents components = UriComponentsBuilder.fromHttpUrl("http://192.168.43.63:30001/communication/sendWhatsAppMessage"+requestParams).pathSegment(null).build();
+            ResponseEntity responseEntity = postEntity(components, null, null, String.class);
         }catch (Exception e){
             log.warn("Error sending communication: {}",e.getMessage());
         }
@@ -382,5 +392,35 @@ public class CommunicationService {
     public void NewCommunicationService(){
         //schedule and send all sms/emails
         //change statuses.
+    }
+    //
+    public UriComponents getUriComponent(String resourceURL, MultiValueMap<String, String> requestParams, String... pathUrl) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(resourceURL).pathSegment(pathUrl);
+        return requestParams == null || requestParams.isEmpty()
+                ? builder.build()
+                : builder.queryParams(requestParams).build();
+    }
+//
+
+    //post http request
+    public ResponseEntity postEntity(UriComponents components, Object token, HttpHeaders userHeaders, Class<?> responseType) {
+        try {
+            URI urlb = components.toUri();
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+            headers.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+            if (userHeaders != null && !userHeaders.isEmpty()) {
+                headers.addAll(userHeaders);
+            }
+            HttpEntity<Object> entity = new HttpEntity<>(token, headers);
+            RestTemplate template = new RestTemplate();
+            return template.exchange(urlb, HttpMethod.POST, entity, responseType);
+        } catch (HttpClientErrorException ex) {
+            log.error("HttpClientErrorException=[statusCode={} responseBody={}]", ex.getRawStatusCode(), ex.getResponseBodyAsString());
+            return null;
+        } catch (Exception ex) {
+            log.error(ex.getMessage());
+            return new ResponseEntity(ex,HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

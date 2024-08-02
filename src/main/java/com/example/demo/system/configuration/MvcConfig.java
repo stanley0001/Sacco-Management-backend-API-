@@ -16,8 +16,6 @@ public class MvcConfig {
                     "/welcome"));
             container.addErrorPages(new ErrorPage(HttpStatus.NOT_FOUND,
                     "/welcome"));
-            container.addErrorPages(new ErrorPage(HttpStatus.HTTP_VERSION_NOT_SUPPORTED,
-                    "/welcome"));
         };
     }
 

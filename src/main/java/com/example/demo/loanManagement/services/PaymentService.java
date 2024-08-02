@@ -49,7 +49,6 @@ public String paymentRef="";
             Optional<Customer> leadCustomer = customerService.findByPhone(paymentRes.getAccountNumber());
             if (leadCustomer.isPresent()) {
                 Customer customer = leadCustomer.get();
-
                 //save payment
                 paymentRes.setStatus("PROCESSED");
                 paymentRes.setDestinationAccount(paymentRes.getAccountNumber());
@@ -75,7 +74,7 @@ public String paymentRef="";
                 }
                 if (!accountNumber.isBlank()){
                 //offset amount from loan account
-                    PayLoan(accountNumber, paymentRes.getAmount(),paymentRes.getAccountNumber());
+                    this.PayLoan(accountNumber, paymentRes.getAmount(),paymentRes.getAccountNumber());
 
                 }else {
                      SuspensePayments suspensePayment = new SuspensePayments();
@@ -113,24 +112,19 @@ public void saveSuspensePayment(SuspensePayments payment){suspensePaymentRepo.sa
         log.info("Processing payment");
         email.setRecipient(customer.getEmail());
         email.setMessageType("Payment Confirmation");
-
         //find loanAccount
        Optional<LoanAccount> transactionalAccount=findById(Long.valueOf(accountNumber));
-       LoanAccount loanAccount=null;
-       Float accountBalance=Float.valueOf(0);
-       if (transactionalAccount.isPresent()){
-          loanAccount= transactionalAccount.get();
-           accountBalance=loanAccount.getAccountBalance();
-       }
+       LoanAccount loanAccount=transactionalAccount.get();
+       Float accountBalance=loanAccount.getAccountBalance();
+
        Float paidAmount=Float.valueOf(0);
        Float suspenseAmount=Float.valueOf(0);
        if (Float.valueOf(amount)>accountBalance){
            paidAmount=accountBalance;
            suspenseAmount=Float.valueOf(amount)-accountBalance;
            email.setMessage("Thank you "+customer.getFirstName()+"  We have have Received your payment of Ksh "+amount+" You have over Paid by Ksh "+suspenseAmount);
-
            //update loan status
-           updateStatus(loanAccount.getAccountId().toString(),"PAID");
+           this.updateStatus(loanAccount.getAccountId().toString(),"PAID");
        }else  {
            paidAmount=Float.valueOf(amount);
        }
@@ -139,7 +133,7 @@ public void saveSuspensePayment(SuspensePayments payment){suspensePaymentRepo.sa
 
        if (finalAmount.equals(Float.valueOf(0))){
           //update loan status
-           updateStatus(loanAccount.getAccountId().toString(),"PAID");
+           this.updateStatus(loanAccount.getAccountId().toString(),"PAID");
            email.setMessage("Thank you "+customer.getFirstName()+"  We have have Received your payment of Ksh "+amount+" Your balance is Ksh 0");
        }else {
            email.setMessage("Thank you "+customer.getFirstName()+"  We have have Received your payment of Ksh "+amount+" Your balance is Ksh"+finalAmount);

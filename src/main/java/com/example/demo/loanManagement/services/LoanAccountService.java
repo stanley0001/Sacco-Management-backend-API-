@@ -11,6 +11,7 @@ import com.example.demo.system.parsitence.models.Schedule.Schedule;
 import com.example.demo.customerManagement.parsistence.models.ClientInfo;
 import com.example.demo.system.parsitence.repositories.ScheduleRepo;
 import com.example.demo.system.services.Backbone;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -59,7 +60,7 @@ public class LoanAccountService {
     }
  Email email=new Email();
     public LoanAccount save(LoanAccount loanAccount){
-        return loanAccountRepo.save(loanAccount);
+        return loanAccountRepo.saveAndFlush(loanAccount);
     }
     public List<LoanAccount> findAll(){
         return loanAccountRepo.findAll();
@@ -75,7 +76,8 @@ public class LoanAccountService {
         return findByApplicationId(applicationId);
 
     }
-    public void updateStatus(String accountId,String status){
+    @SneakyThrows
+    public void updateStatus(String accountId, String status){
         //update other states
         List<LoanStates> loanStates=loanStatesRepo.findByAccountNumber(accountId);
         for (LoanStates loanStates1:loanStates
@@ -84,8 +86,7 @@ public class LoanAccountService {
             loanStatesRepo.save(loanStates1);
         }
         LoanAccount account=findById(Long.valueOf(accountId)).get();
-        log.info("Updating status for account [{}]",account,"to {}",status);
-        account.setStatus(status);
+        log.info("Updating status for account {} to {}",account,status);
         if(status=="CURRENT"){
             account.setStartDate(LocalDateTime.now());
             account.setDueDate(getDueDate(Long.valueOf(accountId)));
@@ -94,12 +95,28 @@ public class LoanAccountService {
         log.info("saving status");
         LoanStates state=new LoanStates();
         state.setStatus(status);
+        account.setStatus(status);
         state.setAccountNumber(accountId);
         state.setActive(Boolean.TRUE);
         state.setStartDate(LocalDateTime.now());
         loanStatesRepo.save(state);
-        //save account
-        save(account);
+        LoanAccount savedAccount=this.save(account);
+        log.info("Account updated with : {}",savedAccount);
+        /*Thread.sleep(2000);
+        this.updateLoanStatus(account);
+
+         */
+    }
+    void updateLoanStatus(LoanAccount account){
+        List<LoanStates> loanStates=loanStatesRepo.findByAccountNumber(String.valueOf(account.getAccountId()));
+        for (LoanStates loanStates1:loanStates
+        ) {
+            if (loanStates1.getActive()){
+                account.setStatus(loanStates1.getStatus());
+                LoanAccount account1=loanAccountRepo.save(account);
+                log.info("Status updated {}",account1);
+            }
+        }
     }
     public LocalDateTime getDueDate(Long accountId){
         LoanAccount account=findById(accountId).get();
@@ -169,11 +186,15 @@ public class LoanAccountService {
          }
           return modifiedList;
      }
-    /*find by customer phone
+    /*find by customer phone  */
     public Optional<LoanAccount> findByCustomerPhone(String customerPhone) {
-       return loanAccountRepo.findByCustomerPhone(customerPhone);
+        List<LoanAccount> la=loanAccountRepo.findByStatus("DEFAULT");
+        Customer cs=customerService.findByPhone(customerPhone).orElse(null);
+        if (cs==null)
+            return Optional.empty();
+       return loanAccountRepo.findByCustomerIdAndStatusNot(String.valueOf(cs.getId()),"PAID");
     }
-    */
+
 
 
      //default action
@@ -215,9 +236,12 @@ public class LoanAccountService {
         log.info("Calculating charges");
         loanApplication application=applicationRepo.findById(Long.valueOf(TransactionalAccount.getApplicationId())).get();
         log.info("Loan application Found {}",application);
-        Charges charge= chargeServiceImpl.getChargeByProductIdAndName(productService.findByProductCode(application.getProductCode()).getId().toString(),chargeType).get();
+        Charges charge= chargeServiceImpl.getChargeByProductIdAndName(productService.findByProductCode(application.getProductCode()).getId().toString(),chargeType).orElse(null);
         log.info("Charge1 {}",charge);
-         Float chargeRate=Float.valueOf(charge.getRate())/100;
+        double rate=0.002;
+        if (charge!=null)
+            rate=charge.getRate();
+         Float chargeRate=Float.valueOf((float) rate)/100;
         Float accountBalance=TransactionalAccount.getAccountBalance();
         Float loanAmount=TransactionalAccount.getAmount();
         Float TransactionalAmount=loanAmount*chargeRate;

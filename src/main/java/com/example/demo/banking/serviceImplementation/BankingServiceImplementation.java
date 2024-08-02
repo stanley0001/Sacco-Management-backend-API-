@@ -7,8 +7,6 @@ import com.example.demo.banking.parsitence.repositories.BankAccountRepo;
 import com.example.demo.banking.parsitence.repositories.PaymentRepo;
 import com.example.demo.banking.parsitence.repositories.PaymentTransactionRepo;
 import com.example.demo.banking.services.BankingService;
-import com.example.demo.communication.parsitence.models.Email;
-import com.example.demo.communication.parsitence.models.singleSmsModel;
 import com.example.demo.communication.parsitence.repositories.emailRepo;
 import com.example.demo.communication.services.CommunicationService;
 import com.example.demo.communication.services.InfoBidApiService;
@@ -18,7 +16,6 @@ import com.example.demo.loanManagement.parsistence.models.LoanAccount;
 import com.example.demo.loanManagement.parsistence.models.SuspensePayments;
 import com.example.demo.loanManagement.services.LoanAccountService;
 import com.example.demo.loanManagement.services.PaymentService;
-import com.infobip.model.SmsResponse;
 import lombok.extern.log4j.Log4j2;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -177,8 +174,10 @@ public class BankingServiceImplementation implements BankingService {
             this.handleSavings(customer,payment);
         }
         //send communication
-        this.sendTransactionalSMS(customer.getPhoneNumber(),"Dear "+customer.getFirstName()+", "+customer.getExternalId()+" we have received your contribution of Ksh "+payment.getAmount()+" and Ref "+payment.getOtherRef()+" at "+payment.getPaymentTime()+" Your Nyanathi Saving account");
+        log.info("sending transaction sms");
+        customerService.sendTransactionalSMS(customer.getPhoneNumber(),"Dear "+customer.getFirstName()+", "+customer.getExternalId()+" we have received your contribution of Ksh "+payment.getAmount()+" and Ref "+payment.getOtherRef()+" at "+payment.getPaymentTime()+" Your Nyanathi Saving account \n your balance is ksh "+getBankAccountsByCustomer(customer).get().get(2).getAccountBalance());
         payment.setStatus("PROCESSED AS CONTRIBUTION");
+        log.info("saving payment");
          this.paymentRepo.save(payment);
     }
 
@@ -230,38 +229,15 @@ public class BankingServiceImplementation implements BankingService {
         transaction.setOtherRef(paymentRef);
         transaction.setBankAccount(savingsAccount);
         //create transactions
+        log.info("saving transaction");
         this.saveTransaction(transaction);
         //update account balance
+        log.info("updating balance");
         savingsAccount.setAccountBalance(transaction.getClosingBalance());
         //save amount
         this.saveBankAccount(savingsAccount);
     }
-  @Async
-  public void sendTransactionalSMS(String phone,String message){
-      singleSmsModel sms=new singleSmsModel();
-      Email SMS=new Email();
-      SMS.setMessage(message);
-      SMS.setRecipient(phone);
-      SMS.setMessageType("SMS");
-      SMS.setStatus("NEW");
-      SMS.setDate(LocalDate.now());
-      emailRepo.save(SMS);
-      sms.setContact(SMS.getRecipient());
-      sms.setMessage(SMS.getMessage());
-      SmsResponse response=smsService.send1(sms);
-      log.info("sending sms");
-      if (response!=null) {
-          log.info("receiced response");
-          if (!response.getBulkId().isEmpty()) {
-              SMS.setStatus("PROCESSED " + response.getMessages().get(0).getMessageId());
-              emailRepo.save(SMS);
-              log.info("Sms response {}", response.getMessages());
-          }
-      }else {
-          log.info("No response from sms API");
-      }
 
-  }
     //creating BankAccounts
     public List<BankAccounts> createBankAccounts(Customer customer){
         log.info("creating bank accounts for : {}",customer.getPhoneNumber());

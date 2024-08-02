@@ -2,9 +2,11 @@ package com.example.demo.customerManagement.controllers;
 
 import com.africastalking.sms.Recipient;
 import com.example.demo.banking.parsitence.enitities.Payments;
+import com.example.demo.communication.parsitence.models.WhatsAppMessage;
 import com.example.demo.communication.parsitence.models.bulkSmsModel;
 import com.example.demo.communication.services.AfricasTalkingApiService;
 import com.example.demo.communication.services.CommunicationService;
+import com.example.demo.communication.services.WhatsAppService;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.customerManagement.parsistence.models.ClientInfo;
 import com.example.demo.customerManagement.services.CustomerS;
@@ -45,8 +47,9 @@ public class CustomerController {
     public final ScoreService scoreService;
     public final AfricasTalkingApiService sms;
     public final CommunicationService communicationService;
+    public final WhatsAppService whatsAppService;
 
-    public CustomerController(SubscriptionService subscriptions, CustomerS customerService, UserService userService, LoanService loanService, PaymentService paymentService, LoanAccountService loanAccountService, ReportService reportService, ScoreService scoreService, AfricasTalkingApiService sms, CommunicationService communicationService) {
+    public CustomerController(SubscriptionService subscriptions, CustomerS customerService, UserService userService, LoanService loanService, PaymentService paymentService, LoanAccountService loanAccountService, ReportService reportService, ScoreService scoreService, AfricasTalkingApiService sms, CommunicationService communicationService, WhatsAppService whatsAppService) {
         this.subscriptions = subscriptions;
         this.customerService = customerService;
         this.userService = userService;
@@ -57,6 +60,7 @@ public class CustomerController {
         this.scoreService = scoreService;
         this.sms = sms;
         this.communicationService = communicationService;
+        this.whatsAppService = whatsAppService;
     }
 
     //creating customers
@@ -122,9 +126,19 @@ public class CustomerController {
        loanService.loanApplication(application.getPhone(),application.getProductCode(),application.getAmount());
         return new ResponseEntity<>(HttpStatus.OK);
     }
+    @PostMapping("/whatsappComm")
+    public ResponseEntity whatsappComm(@RequestBody WhatsAppMessage message){
+        whatsAppService.processWhatsAppRequest(message);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
     @PostMapping("/loanRepayment")
     public ResponseEntity<Payments> loanRepayment(String phoneNumber, String productCode, String amount){
         paymentService.paymentRequest(phoneNumber,productCode,amount);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+    @PostMapping("/customPayment")
+    public ResponseEntity<Payments> customPayment(@RequestBody Payments payment){
+        paymentService.processLoanPayment(payment);
         return new ResponseEntity<>(HttpStatus.OK);
     }
    @PostMapping("/score")

@@ -7,8 +7,11 @@ import com.example.demo.banking.parsitence.repositories.BankAccountRepo;
 import com.example.demo.banking.parsitence.repositories.PaymentRepo;
 import com.example.demo.banking.parsitence.repositories.PaymentTransactionRepo;
 import com.example.demo.communication.parsitence.models.Email;
-import com.example.demo.customerManagement.parsistence.models.ClientInfo;
+import com.example.demo.communication.parsitence.models.singleSmsModel;
+import com.example.demo.communication.parsitence.repositories.emailRepo;
+import com.example.demo.communication.services.InfoBidApiService;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.customerManagement.parsistence.models.ClientInfo;
 import com.example.demo.customerManagement.parsistence.repositories.CustomerRepo;
 import com.example.demo.customerManagement.services.CustomerS;
 import com.example.demo.loanManagement.parsistence.models.Subscriptions;
@@ -18,8 +21,10 @@ import com.example.demo.loanManagement.services.SubscriptionService;
 import com.example.demo.system.parsitence.models.ResponseModel;
 import com.example.demo.userManagements.parsitence.enitities.Users;
 import com.example.demo.userManagements.serviceImplementation.UserService;
+import com.infobip.model.SmsResponse;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -28,6 +33,7 @@ import java.util.Optional;
 
 @Service
 @Log4j2
+@EnableAsync
 public class CustomerService implements CustomerS {
 
    public final CustomerRepo customerRepo;
@@ -37,8 +43,10 @@ public class CustomerService implements CustomerS {
    public final BankAccountRepo bankAccountRepo;
    public final PaymentTransactionRepo transactionsRepo;
    public final PaymentRepo paymentRepo;
+   public final emailRepo emailRepo;
+   public final InfoBidApiService communicationService;
 
-    public CustomerService(CustomerRepo customerRepo, UserService userService, SubscriptionService subscriptionService, ApplicationRepo applicationRepo, BankAccountRepo bankAccountRepo, PaymentTransactionRepo transactionsRepo, PaymentRepo paymentRepo) {
+    public CustomerService(CustomerRepo customerRepo, UserService userService, SubscriptionService subscriptionService, ApplicationRepo applicationRepo, BankAccountRepo bankAccountRepo, PaymentTransactionRepo transactionsRepo, PaymentRepo paymentRepo, com.example.demo.communication.parsitence.repositories.emailRepo emailRepo, InfoBidApiService communicationService) {
         this.customerRepo = customerRepo;
         this.userService = userService;
         this.subscriptionService = subscriptionService;
@@ -46,6 +54,8 @@ public class CustomerService implements CustomerS {
         this.bankAccountRepo = bankAccountRepo;
         this.transactionsRepo = transactionsRepo;
         this.paymentRepo = paymentRepo;
+        this.emailRepo = emailRepo;
+        this.communicationService = communicationService;
     }
 
     public Customer saveCustomer(Customer customer) {
@@ -53,6 +63,7 @@ public class CustomerService implements CustomerS {
         //ie iprs,external perties,crb
         //field validation
         Customer client= customerRepo.save(customer);
+        this.sendTransactionalSMS(client.getPhoneNumber(),"Dear "+client.getFirstName()+" "+client.getLastName()+" You have been successfully registered to Nyanathi sacco with member number "+client.getExternalId());
         return client;
     }
 
@@ -129,5 +140,31 @@ public class CustomerService implements CustomerS {
 
     public Optional<Customer> findByPhone(String customerPhone) {
         return customerRepo.findByphoneNumber(customerPhone);
+    }
+
+    public void sendTransactionalSMS(String phone,String message){
+        singleSmsModel sms=new singleSmsModel();
+        Email SMS=new Email();
+        SMS.setMessage(message);
+        SMS.setRecipient(phone);
+        SMS.setMessageType("SMS");
+        SMS.setStatus("NEW");
+        SMS.setDate(LocalDate.now());
+        emailRepo.save(SMS);
+        sms.setContact(SMS.getRecipient());
+        sms.setMessage(SMS.getMessage());
+        SmsResponse response=communicationService.send1(sms);
+        log.info("sending sms");
+        if (response!=null) {
+            log.info("receiced response");
+            if (!response.getBulkId().isEmpty()) {
+                SMS.setStatus("PROCESSED " + response.getMessages().get(0).getMessageId());
+                emailRepo.save(SMS);
+                log.info("Sms response {}", response.getMessages());
+            }
+        }else {
+            log.info("No response from sms API");
+        }
+
     }
 }

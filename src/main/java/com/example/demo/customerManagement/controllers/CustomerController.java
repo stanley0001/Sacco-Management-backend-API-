@@ -1,6 +1,6 @@
 package com.example.demo.customerManagement.controllers;
 
-import com.africastalking.sms.Recipient;
+//import com.africastalking.sms.Recipient;
 import com.example.demo.banking.parsitence.enitities.Payments;
 import com.example.demo.communication.parsitence.models.WhatsAppMessage;
 import com.example.demo.communication.parsitence.models.bulkSmsModel;
@@ -157,11 +157,11 @@ public class CustomerController {
          DashBoardData data= reportService.getData();
         return new ResponseEntity<>(data,HttpStatus.OK);
     }
-    @PostMapping("/sendSms")
-    public ResponseEntity<List<Recipient>> send(String message) throws IOException {
-        List<Recipient> data= sms.sendSms(message);
-        return new ResponseEntity<>(data,HttpStatus.OK);
-    }
+//    @PostMapping("/sendSms")
+//    public ResponseEntity<List<Recipient>> send(String message) throws IOException {
+//        List<Recipient> data= sms.sendSms(message);
+//        return new ResponseEntity<>(data,HttpStatus.OK);
+//    }
     @PostMapping("/sendSms2")
     public ResponseEntity<List<SmsResponse>> send(@RequestBody bulkSmsModel customSms) throws IOException, ApiException {
         List<SmsResponse> data= communicationService.sendBulkSMS(customSms);

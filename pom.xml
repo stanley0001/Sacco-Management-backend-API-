@@ -132,11 +132,6 @@
 			<type>maven-plugin</type>
 		</dependency>
 		<dependency>
-			<groupId>com.github.AfricasTalkingLtd.africastalking-java</groupId>
-			<artifactId>core</artifactId>
-			<version>3.4.8</version>
-		</dependency>
-		<dependency>
 			<groupId>com.infobip</groupId>
 			<artifactId>infobip-api-java-client</artifactId>
 			<version>3.1.0</version>

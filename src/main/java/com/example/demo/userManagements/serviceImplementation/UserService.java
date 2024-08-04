@@ -201,6 +201,7 @@ public class UserService implements UserDetailsService {
       updatedPassword.setEndDate(LocalDate.now());
       log.info("Generating and updating password ...");
       String password=randomString();
+      log.info("actual password= {}",password);
       updatedPassword.setPassword(password);
       updateP(updatedPassword);
       log.info("password updated.");

@@ -23,7 +23,8 @@ public class LoanBookController {
     public ResponseEntity<ResponseModel> createProductModified(@RequestBody List<LoanBookUpload> data){
         ResponseModel responseModel=new ResponseModel();
         eventPublisher.publishEvent(new LoanBookUploadEvent(this,data));
-        responseModel.setMessage("Data received for processing");
+        int size=data.size();
+        responseModel.setMessage(size+" Record(s) received for processing");
         responseModel.setStatus(HttpStatus.OK);
         return new ResponseEntity<>(responseModel, HttpStatus.OK);
     }

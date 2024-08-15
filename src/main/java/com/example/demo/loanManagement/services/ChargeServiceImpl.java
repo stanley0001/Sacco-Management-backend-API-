@@ -1,6 +1,6 @@
 package com.example.demo.loanManagement.services;
 
-import com.example.demo.loanManagement.parsistence.models.Charges;
+import com.example.demo.loanManagement.parsistence.entities.Charges;
 import com.example.demo.loanManagement.parsistence.repositories.ChargesRepo;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;

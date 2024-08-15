@@ -1,31 +1,17 @@
 package com.example.demo.loanManagement.parsistence.models;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class subscriptionR {
         private String phone;
         private Long productId;
+        private Integer amount;
 
-        public subscriptionR(String phone, Long productId) {
-            this.phone = phone;
-            this.productId = productId;
-        }
 
-    public subscriptionR() {
-    }
-
-    public String getPhone() {
-            return phone;
-        }
-
-        public void setPhone(String phone) {
-            this.phone = phone;
-        }
-
-        public Long getProductId() {
-            return productId;
-        }
-
-        public void setProductId(Long productId) {
-            this.productId = productId;
-        }
 
 }

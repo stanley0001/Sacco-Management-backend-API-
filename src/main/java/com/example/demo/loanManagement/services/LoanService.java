@@ -2,6 +2,9 @@ package com.example.demo.loanManagement.services;
 
 import com.example.demo.communication.parsitence.models.Email;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.enums.Statuses;
+import com.example.demo.loanManagement.parsistence.entities.*;
+import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
 import com.example.demo.loanManagement.parsistence.models.*;
 import com.example.demo.loanManagement.parsistence.repositories.ApplicationRepo;
 import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
@@ -18,8 +21,11 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -63,7 +69,7 @@ public class LoanService {
         //get subscriptions
         Subscriptions subscription=subscriptionService.findCustomerIdandproductCode(customer.getId().toString(),productCode).get();
 
-        loanApplication loanApplication=new loanApplication();
+        LoanApplication loanApplication=new LoanApplication();
         //save loan application
         loanApplication.setApplicationTime(LocalDateTime.now());
         loanApplication.setCreditLimit(subscription.getCreditLimit().toString());
@@ -92,7 +98,7 @@ public class LoanService {
         if (internalChecks.Productchecks(data).isBlank()){
             loanApplication.setApplicationStatus("AUTHORISED");
             log.info("saving loan application....");
-            loanApplication application=applicationRepo.save(loanApplication);
+            LoanApplication application=applicationRepo.save(loanApplication);
             //interest application
             loanTransactions transaction=interestCalculator(loanApplication);
             //create loan account
@@ -144,7 +150,7 @@ public class LoanService {
                 Subscriptions subscription=subscription1.get();
                 email.setRecipient(customer.getEmail());
                 email.setMessageType("Loan Application");
-                loanApplication loanApplication=new loanApplication();
+                LoanApplication loanApplication=new LoanApplication();
                 loanApplication.setApplicationTime(LocalDateTime.now());
                 loanApplication.setCreditLimit(subscription.getCreditLimit().toString());
                 loanApplication.setCustomerId(customer.getId().toString());
@@ -209,7 +215,8 @@ public class LoanService {
 
     return new ResponseEntity("No Customer found",HttpStatus.OK);
    }
-    public loanTransactions interestCalculator(loanApplication loan){
+
+    public loanTransactions interestCalculator(LoanApplication loan){
         log.info("calculating interest....");
         Float interestRate=Float.valueOf(loan.getLoanInterest())/100;
         Float interest=interestRate*Float.valueOf(loan.getLoanAmount());
@@ -228,12 +235,116 @@ public class LoanService {
         return transaction;
     }
 
-    public Optional<loanApplication> findApplicationByPhone(String phone){
+    public Optional<LoanApplication> findApplicationByPhone(String phone){
         return applicationRepo.findByCustomerMobileNumber(phone);
 
     }
 
-    public Optional<loanApplication> findApplicationById(Long applicationId) {
+    public Optional<LoanApplication> findApplicationById(Long applicationId) {
         return applicationRepo.findById(applicationId);
+    }
+
+
+    public LoanCalculatorResponse loanCalculator(LoanCalculator data) {
+        LoanCalculatorResponse calculatorResponse = new LoanCalculatorResponse();
+        Products loanProduct = productService.findById(Long.valueOf(data.getProductId())).orElse(null);
+        if (loanProduct == null) return null;
+        LoanAccountModel account = new LoanAccountModel();
+        account.setInstallments(data.getNumberOfInstallments());
+        account.setAmount(Float.valueOf(data.getAmount()));
+        account.setStartDate(LocalDateTime.now());
+        //get this from loan product
+        String interestType="simple";
+        float totalInterest = interestCalculator(account.getAmount(), loanProduct.getInterest(), account.getInstallments(), interestType);
+        account.setInterest(totalInterest);
+
+        float totalRepayment = account.getAmount() + totalInterest;
+        account.setTotalRepayment(totalRepayment);
+
+        List<RepaymentSchedules> schedules = getInstallments(account);
+        calculatorResponse.setSchedules(schedules);
+        calculatorResponse.setLoanAccount(account);
+        calculatorResponse.setTotalRepayment(totalRepayment);
+        calculatorResponse.setTotalInterest(totalInterest);
+
+        return calculatorResponse;
+    }
+
+    private float interestCalculator(float principal, float annualInterestRate, int installments, String interestType) {
+        float totalInterest = 0;
+
+        switch (interestType.toLowerCase()) {
+            case "simple":
+                totalInterest = simpleInterest(principal, annualInterestRate, installments);
+                break;
+            case "compound":
+                totalInterest = compoundInterest(principal, annualInterestRate, installments);
+                break;
+            case "reducing balance":
+                totalInterest = reducingBalanceInterest(principal, annualInterestRate, installments);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid interest type");
+        }
+
+        return totalInterest;
+    }
+
+    private float simpleInterest(float principal, float annualInterestRate, int installments) {
+        return (principal * annualInterestRate * installments) / 100;
+    }
+
+    private float compoundInterest(float principal, float annualInterestRate, int installments) {
+        double monthlyInterestRate = (annualInterestRate / 100) / 12;
+        double totalRepayment = principal * Math.pow((1 + monthlyInterestRate), installments);
+        return (float)(totalRepayment - principal);
+    }
+
+    private float reducingBalanceInterest(float principal, float annualInterestRate, int installments) {
+        float totalInterest = 0;
+        double monthlyInterestRate = (annualInterestRate / 100) / 12;
+        float balance = principal;
+
+        for (int i = 0; i < installments; i++) {
+            float interest = (float)(balance * monthlyInterestRate);
+            totalInterest += interest;
+            float monthlyPrincipalRepayment = principal / installments;
+            balance -= monthlyPrincipalRepayment;
+        }
+
+        return totalInterest;
+    }
+
+    public List<RepaymentSchedules> getInstallments(LoanAccountModel accountModel) {
+        List<RepaymentSchedules> schedules = new ArrayList<>();
+        float monthlyRepayment = accountModel.getTotalRepayment() / accountModel.getInstallments();
+
+        for (int i = 0; i < accountModel.getInstallments(); i++) {
+            RepaymentSchedules schedule = new RepaymentSchedules();
+            schedule.setInstallmentNumber(i + 1);
+            schedule.setAmount(monthlyRepayment);
+            schedule.setBalance((double) monthlyRepayment);
+            schedule.setAmountPaid(0.0);
+            //check allow decimals
+            if (true){
+                schedule.setAmount((float) Math.ceil(monthlyRepayment));
+                schedule.setBalance(Math.ceil(monthlyRepayment));
+            }
+            schedule.setStatus(Statuses.CURRENT);
+            schedule.setDueDate(LocalDate.from(accountModel.getStartDate().plusMonths(i)));
+            schedule.setCommencementDate(schedule.getDueDate(),"MONTHLY");
+
+            schedules.add(schedule);
+        }
+
+        return schedules;
+    }
+
+    public LoanAccount loadAccount(LoanBookUpload upload,Customer customer) {
+        LoanApplication loanApplication= new LoanApplication(upload,customer);
+        loanApplication=applicationRepo.save(loanApplication);
+        LoanAccount loanAccount =new LoanAccount(upload,loanApplication,customer);
+        loanAccount=loanAccountRepo.save(loanAccount);
+        return  loanAccount;
     }
 }

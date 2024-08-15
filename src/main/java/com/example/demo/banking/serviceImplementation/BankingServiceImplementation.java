@@ -12,8 +12,8 @@ import com.example.demo.communication.services.CommunicationService;
 import com.example.demo.communication.services.InfoBidApiService;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.customerManagement.serviceImplimentations.CustomerService;
-import com.example.demo.loanManagement.parsistence.models.LoanAccount;
-import com.example.demo.loanManagement.parsistence.models.SuspensePayments;
+import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.loanManagement.parsistence.entities.SuspensePayments;
 import com.example.demo.loanManagement.services.LoanAccountService;
 import com.example.demo.loanManagement.services.PaymentService;
 import lombok.extern.log4j.Log4j2;
@@ -306,7 +306,7 @@ public class BankingServiceImplementation implements BankingService {
     }
     //REFRESH ALL ACCOUNTS
     public void refreshAllAccounts(){
-        List<Customer> customers=customerService.findAll();
+        List<Customer> customers= (List<Customer>) customerService.findAll(0,10).getBody();
         for (Customer customer:
                 customers ) {
         try {

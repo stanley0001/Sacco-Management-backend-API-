@@ -10,6 +10,10 @@ public class ResponseModel {
     private HttpStatus status;
     private String message;
     private String errors;
-    private String body;
+    private int page;
+    private int totalPages;
+    private int size;
+    private int totalElements;
+    private transient Object body;
 
 }

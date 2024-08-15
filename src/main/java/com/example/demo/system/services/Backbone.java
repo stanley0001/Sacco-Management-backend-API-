@@ -1,7 +1,7 @@
 package com.example.demo.system.services;
 
 import com.example.demo.system.parsitence.models.Schedule.Schedule;
-import com.example.demo.loanManagement.parsistence.models.loanTransactions;
+import com.example.demo.loanManagement.parsistence.entities.loanTransactions;
 import com.example.demo.system.parsitence.repositories.ScheduleRepo;
 import com.example.demo.loanManagement.parsistence.repositories.TransactionsRepo;
 import lombok.extern.log4j.Log4j2;

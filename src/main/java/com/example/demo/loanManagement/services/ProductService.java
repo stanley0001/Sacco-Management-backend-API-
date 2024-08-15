@@ -1,6 +1,6 @@
 package com.example.demo.loanManagement.services;
 
-import com.example.demo.loanManagement.parsistence.models.Products;
+import com.example.demo.loanManagement.parsistence.entities.Products;
 import com.example.demo.loanManagement.parsistence.repositories.ProductRepo;
 import org.springframework.stereotype.Service;
 import lombok.extern.log4j.Log4j2;
@@ -45,4 +45,5 @@ public class ProductService {
     public Products findByProductCode(String productCode) {
         return productRepo.findByCode(productCode);
     }
+
 }

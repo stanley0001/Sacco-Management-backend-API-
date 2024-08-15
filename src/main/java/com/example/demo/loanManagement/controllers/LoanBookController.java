@@ -2,6 +2,9 @@ package com.example.demo.loanManagement.controllers;
 
 import com.example.demo.events.appEvents.LoanBookUploadEvent;
 import com.example.demo.loanManagement.parsistence.models.LoanBookUpload;
+import com.example.demo.loanManagement.parsistence.models.LoanCalculator;
+import com.example.demo.loanManagement.parsistence.models.LoanCalculatorResponse;
+import com.example.demo.loanManagement.services.LoanService;
 import com.example.demo.system.parsitence.models.ResponseModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -15,10 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/loan-book")
+@RequestMapping("/loan-actions")
 public class LoanBookController {
     @Autowired
     ApplicationEventPublisher eventPublisher;
+    @Autowired
+    LoanService loanService;
     @PostMapping("/upload")
     public ResponseEntity<ResponseModel> createProductModified(@RequestBody List<LoanBookUpload> data){
         ResponseModel responseModel=new ResponseModel();
@@ -28,4 +33,19 @@ public class LoanBookController {
         responseModel.setStatus(HttpStatus.OK);
         return new ResponseEntity<>(responseModel, HttpStatus.OK);
     }
+    @PostMapping("calculator")
+    public ResponseEntity<ResponseModel> loanCalculator(@RequestBody LoanCalculator data){
+        ResponseModel responseModel=new ResponseModel();
+//        eventPublisher.publishEvent(new LoanBookUploadEvent(this,data));
+        LoanCalculatorResponse response=loanService.loanCalculator(data);
+        responseModel.setBody(response);
+        responseModel.setMessage("Success");
+        responseModel.setStatus(HttpStatus.OK);
+        if (response==null) {
+            responseModel.setMessage("FAILED");
+            responseModel.setStatus(HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(responseModel, responseModel.getStatus());
+    }
+
 }

@@ -1,5 +1,8 @@
 package com.example.demo.loanManagement.parsistence.models;
 
+import com.example.demo.loanManagement.parsistence.entities.Charges;
+import com.example.demo.loanManagement.parsistence.entities.Products;
+
 import java.util.List;
 
 public class productCreation {

@@ -1,5 +1,6 @@
 package com.example.demo.customerManagement.parsistence.entities;
 
+import com.example.demo.loanManagement.parsistence.models.LoanBookUpload;
 import lombok.*;
 
 import javax.persistence.*;
@@ -48,6 +49,15 @@ public class Customer implements Serializable {
     private String branchCode;
     private LocalDate createdAt;
     private LocalDate updatedAt;
+
+    public Customer(LoanBookUpload upload) {
+        String[] customerName = upload.getCustomerName().trim().split(" ");
+        this.firstName=customerName.length<1?upload.getCustomerName():customerName[0];
+        this.middleName=customerName.length>1?customerName[1]:null;
+        this.lastName=customerName.length>2?customerName[2]:middleName;
+        this.documentNumber=upload.getDocumentNumber();
+        this.phoneNumber=upload.getPhoneNumber();
+    }
     /*@OneToMany
     List<BankAccounts> bankAccounts;
 

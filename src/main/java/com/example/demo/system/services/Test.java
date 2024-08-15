@@ -1,10 +1,9 @@
 package com.example.demo.system.services;
 
-import com.example.demo.loanManagement.parsistence.models.LoanAccount;
-import com.example.demo.loanManagement.parsistence.models.SuspensePayments;
+import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.loanManagement.parsistence.entities.SuspensePayments;
 import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
 import com.example.demo.loanManagement.parsistence.repositories.SuspensePaymentRepo;
-import com.example.demo.system.services.Backbone;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

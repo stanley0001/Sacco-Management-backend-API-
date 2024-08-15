@@ -1,6 +1,6 @@
 package com.example.demo.banking.services;
 
-import com.example.demo.loanManagement.parsistence.models.Disbursements;
+import com.example.demo.loanManagement.parsistence.entities.Disbursements;
 import com.example.demo.loanManagement.services.DisbursementService;
 import com.example.demo.system.services.InternalChecks;
 import com.example.demo.userManagements.serviceImplementation.UserService;

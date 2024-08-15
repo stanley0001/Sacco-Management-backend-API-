@@ -18,4 +18,5 @@ public class LoanBookUpload {
     private String commencementDate;
     private String dueDate;
     private String productName;
+    private Integer installments;
 }

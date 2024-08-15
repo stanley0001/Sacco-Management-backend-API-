@@ -1,6 +1,6 @@
 package com.example.demo.system.parsitence.models;
 
-import com.example.demo.loanManagement.parsistence.models.loanApplication;
+import com.example.demo.loanManagement.parsistence.entities.LoanApplication;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,7 +9,7 @@ import java.util.List;
 @Getter
 @Setter
 public class DashBoardData {
-    private List<loanApplication> applicationsToday;
+    private List<LoanApplication> applicationsToday;
     private String disbursementToday;
     private String collectionToday;
     private Integer amountDisbursedToday;

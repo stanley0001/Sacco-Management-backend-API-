@@ -1,9 +1,18 @@
-package com.example.demo.loanManagement.parsistence.models;
+package com.example.demo.loanManagement.parsistence.entities;
+
+import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.loanManagement.parsistence.models.LoanBookUpload;
+import lombok.Data;
 
 import javax.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.Locale;
 
 @Entity
+@Data
 public class LoanAccount {
 
 
@@ -19,7 +28,7 @@ public class LoanAccount {
     private Float amount;
     @Column(nullable = false)
     private Float payableAmount;
-    @Column(nullable = false)
+    private Float amountPaid;
     private Float accountBalance;
     private  LocalDateTime startDate;
     private  LocalDateTime dueDate;
@@ -29,6 +38,7 @@ public class LoanAccount {
     private  String customerId;
     @Column(nullable = false)
     private  String loanref;
+    private Integer installments;
     public LoanAccount() {
     }
 
@@ -63,92 +73,23 @@ public class LoanAccount {
         this.loanref = loanref;
     }
 
-    public String getLoanref() {
-        return loanref;
+    public LoanAccount(LoanBookUpload upload, LoanApplication loanApplication, Customer customer) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("M/d/yyyy", Locale.ENGLISH);
+        this.applicationId = loanApplication.getApplicationId();
+        this.OtherRef = upload.getLoanRef();
+        this.amount = Float.valueOf(upload.getLoanAmount());
+        this.payableAmount = Float.parseFloat(upload.getLoanAmount())+Float.parseFloat(upload.getInterest());
+        this.accountBalance = Float.valueOf(upload.getBalance());
+        this.startDate = LocalDate.parse(upload.getDueDate(), formatter).atStartOfDay();
+        this.dueDate = LocalDate.parse(upload.getDueDate(), formatter).atTime(23,59);
+        this.status = upload.getLoanStatus();
+        this.customerId = String.valueOf(customer.getId());
+        this.loanref = upload.getLoanRef();
+        this.installments=upload.getInstallments();
     }
 
-    public void setLoanref(String loanref) {
-        this.loanref = loanref;
-    }
-
-    public Long getAccountId() {
-        return accountId;
-    }
-
-    public void setAccountId(Long accountId) {
-        this.accountId = accountId;
-    }
-
-    public Long getApplicationId() {
-        return applicationId;
-    }
-
-    public void setApplicationId(Long applicationId) {
-        this.applicationId = applicationId;
-    }
-
-    public String getOtherRef() {
-        return OtherRef;
-    }
-
-    public void setOtherRef(String otherRef) {
-        OtherRef = otherRef;
-    }
-
-    public Float getAmount() {
-        return amount;
-    }
-
-    public void setAmount(Float amount) {
-        this.amount = amount;
-    }
-
-    public Float getPayableAmount() {
-        return payableAmount;
-    }
-
-    public void setPayableAmount(Float payableAmount) {
-        this.payableAmount = payableAmount;
-    }
-
-    public Float getAccountBalance() {
-        return accountBalance;
-    }
-
-    public void setAccountBalance(Float accountBalance) {
-        this.accountBalance = accountBalance;
-    }
-
-    public String getCustomerId() {
-        return customerId;
-    }
-
-    public void setCustomerId(String customerId) {
-        this.customerId = customerId;
-    }
-
-    public LocalDateTime getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDateTime getDueDate() {
-        return dueDate;
-    }
-
-    public void setDueDate(LocalDateTime dueDate) {
-        this.dueDate = dueDate;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
+    public Float getAmountPaid() {
+        return this.payableAmount-this.accountBalance;
     }
 
     @Override

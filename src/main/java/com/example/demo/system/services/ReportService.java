@@ -1,9 +1,9 @@
 package com.example.demo.system.services;
 
 import com.example.demo.customerManagement.parsistence.entities.Customer;
-import com.example.demo.loanManagement.parsistence.models.LoanAccount;
+import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
 import com.example.demo.banking.parsitence.enitities.Payments;
-import com.example.demo.loanManagement.parsistence.models.loanApplication;
+import com.example.demo.loanManagement.parsistence.entities.LoanApplication;
 import com.example.demo.loanManagement.parsistence.repositories.ApplicationRepo;
 import com.example.demo.customerManagement.parsistence.repositories.CustomerRepo;
 import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
@@ -49,13 +49,13 @@ public class ReportService {
             amountDisbursed = 0;
         }
         List<Payments> paymentsList = paymentRepo.findAllByPaymentTimeBefore(localDate1);
-        Double amountPayedIn = 0.0;
+        double amountPayedIn = 0.0;
         for (Payments payment : paymentsList
         ) {
-            amountPayedIn += Double.valueOf(payment.getAmount());
+            amountPayedIn += Double.parseDouble(payment.getAmount());
 
         }
-        List<loanApplication> applicationList = applicationRepo.findByApplicationTime(localDate1);
+        List<LoanApplication> applicationList = applicationRepo.findTop10ByApplicationTimeAfter(localDate1);
         Integer disbursementCount = disbursement.size();
         Integer paymentsCount = paymentsList.size();
         Long memberCount=customerRepo.count();

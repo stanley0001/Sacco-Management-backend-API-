@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface CustomerS {
     Customer saveCustomer(Customer customer);
 
-    List<Customer> findAll();
+    ResponseModel findAll(int page,int size);
 
     ClientInfo findById(Long id);
 

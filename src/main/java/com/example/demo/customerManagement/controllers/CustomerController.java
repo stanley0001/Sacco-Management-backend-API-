@@ -10,6 +10,9 @@ import com.example.demo.communication.services.WhatsAppService;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.customerManagement.parsistence.models.ClientInfo;
 import com.example.demo.customerManagement.services.CustomerS;
+import com.example.demo.loanManagement.parsistence.entities.Subscriptions;
+import com.example.demo.loanManagement.parsistence.entities.SuspensePayments;
+import com.example.demo.loanManagement.parsistence.entities.LoanApplication;
 import com.example.demo.loanManagement.parsistence.models.*;
 import com.example.demo.loanManagement.services.LoanAccountService;
 import com.example.demo.loanManagement.services.LoanService;
@@ -34,7 +37,7 @@ import java.util.Optional;
 
 @Log4j2
 @RestController
-@RequestMapping("/customers")
+@RequestMapping("customers")
 public class CustomerController {
 
     public  final SubscriptionService subscriptions;
@@ -70,9 +73,9 @@ public class CustomerController {
         return new ResponseEntity<>(customer1, HttpStatus.CREATED);
     }
     //finding customers info
-    @GetMapping("/findall")
-    public ResponseEntity<List<Customer>> findAll(){
-          List<Customer> customers=customerService.findAll();
+    @GetMapping("all")
+    public ResponseEntity<ResponseModel> findAll(@RequestParam("page") int page,@RequestParam("size") int size){
+        ResponseModel customers=customerService.findAll(page,size);
           return new ResponseEntity<>(customers,HttpStatus.OK);
     }
     //find all suspense payments
@@ -108,7 +111,7 @@ public class CustomerController {
     }
     @PostMapping("/createSubscription")
     public ResponseEntity<subscriptionR> subscribe(@RequestBody subscriptionR req){
-        subscriptions.subscribe(req.getPhone(),req.getProductId());
+        subscriptions.subscribe(req.getPhone(),req.getProductId(),req.getAmount());
         return new ResponseEntity<>(HttpStatus.OK);
     }
     @GetMapping("/findSubscription{id}")
@@ -122,7 +125,7 @@ public class CustomerController {
         return new ResponseEntity<>(subscription,HttpStatus.OK);
     }
     @PostMapping("/loanApplication")
-    public ResponseEntity<loanApplication> loanApplication(@RequestBody newApplication application){
+    public ResponseEntity<LoanApplication> loanApplication(@RequestBody newApplication application){
        loanService.loanApplication(application.getPhone(),application.getProductCode(),application.getAmount());
         return new ResponseEntity<>(HttpStatus.OK);
     }

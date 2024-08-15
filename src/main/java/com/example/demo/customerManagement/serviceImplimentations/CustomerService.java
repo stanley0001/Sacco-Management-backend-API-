@@ -14,8 +14,8 @@ import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.customerManagement.parsistence.models.ClientInfo;
 import com.example.demo.customerManagement.parsistence.repositories.CustomerRepo;
 import com.example.demo.customerManagement.services.CustomerS;
-import com.example.demo.loanManagement.parsistence.models.Subscriptions;
-import com.example.demo.loanManagement.parsistence.models.loanApplication;
+import com.example.demo.loanManagement.parsistence.entities.Subscriptions;
+import com.example.demo.loanManagement.parsistence.entities.LoanApplication;
 import com.example.demo.loanManagement.parsistence.repositories.ApplicationRepo;
 import com.example.demo.loanManagement.services.SubscriptionService;
 import com.example.demo.system.parsitence.models.ResponseModel;
@@ -23,6 +23,9 @@ import com.example.demo.userManagements.parsitence.enitities.Users;
 import com.example.demo.userManagements.serviceImplementation.UserService;
 import com.infobip.model.SmsResponse;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
@@ -63,7 +66,8 @@ public class CustomerService implements CustomerS {
         //ie iprs,external perties,crb
         //field validation
         Customer client= customerRepo.save(customer);
-        this.sendTransactionalSMS(client.getPhoneNumber(),"Dear "+client.getFirstName()+" "+client.getLastName()+" You have been successfully registered to Nyanathi sacco with member number "+client.getExternalId());
+          //fire communication event
+//        this.sendTransactionalSMS(client.getPhoneNumber(),"Dear "+client.getFirstName()+" "+client.getLastName()+" You have been successfully registered to Nyanathi sacco with member number "+client.getExternalId());
         return client;
     }
 
@@ -94,8 +98,18 @@ public class CustomerService implements CustomerS {
 
     }
 
-    public List<Customer> findAll() {
-        return customerRepo.findAll();
+    public ResponseModel findAll(int page,int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Customer> allCustomers = customerRepo.findAll(pageable);
+        ResponseModel responseModel=new ResponseModel();
+        responseModel.setBody(allCustomers.get());
+        responseModel.setSize(allCustomers.getSize());
+        responseModel.setPage(page);
+        responseModel.setTotalElements((int) allCustomers.getTotalElements());
+        responseModel.setTotalPages(allCustomers.getTotalPages());
+        responseModel.setStatus(HttpStatus.OK);
+        responseModel.setMessage(allCustomers.getTotalElements()+" records found");
+        return responseModel;
     }
 
     public ClientInfo findById(Long id) {
@@ -109,7 +123,7 @@ public class CustomerService implements CustomerS {
         String idNumber=client.getDocumentNumber();
         log.info("Fetching application by {}",idNumber);
         List<BankAccounts> bankAccounts=bankAccountRepo.findByCustomer(client).get();
-        List<loanApplication> applications=applicationRepo.findByCustomerIdNumber(idNumber);
+        List<LoanApplication> applications=applicationRepo.findByCustomerIdNumber(idNumber);
         List<Payments> payments=paymentRepo.findAllByCustomer(client);
         clientInfo.setBankAccounts(bankAccounts);
          clientInfo.setClient(client);

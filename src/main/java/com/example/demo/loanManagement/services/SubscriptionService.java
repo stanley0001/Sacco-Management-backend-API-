@@ -1,8 +1,8 @@
 package com.example.demo.loanManagement.services;
 
 import com.example.demo.customerManagement.parsistence.entities.Customer;
-import com.example.demo.loanManagement.parsistence.models.Products;
-import com.example.demo.loanManagement.parsistence.models.Subscriptions;
+import com.example.demo.loanManagement.parsistence.entities.Products;
+import com.example.demo.loanManagement.parsistence.entities.Subscriptions;
 import com.example.demo.customerManagement.parsistence.repositories.CustomerRepo;
 import com.example.demo.loanManagement.parsistence.repositories.SubscriptionRepo;
 import lombok.extern.log4j.Log4j2;
@@ -27,7 +27,7 @@ public class SubscriptionService {
     }
 
 
-    public void subscribe(String customerPhone, Long productId) {
+    public void subscribe(String customerPhone, Long productId,Integer subscriptionAmount) {
         Optional<Customer> customer=customers.findByphoneNumber(customerPhone);
                 //findByPhone(customerPhone);
         if (customer.isPresent()){
@@ -44,7 +44,7 @@ public class SubscriptionService {
                 subscription.setStatus(Boolean.TRUE);
                 subscription.setCreditStatusDate(LocalDate.now());
                 subscription.setCustomerId(customer.get().getId().toString());
-                subscription.setCreditLimit(12000);
+                subscription.setCreditLimit(subscriptionAmount);
                 subscription.setCustomerDocumentNumber(customer.get().getDocumentNumber());
                 subscription.setInterestRate(product.get().getInterest());
                 subscription.setProductCode(product.get().getCode());

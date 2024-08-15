@@ -1,9 +1,9 @@
 package com.example.demo.loanManagement.controllers;
 
 import com.example.demo.loanManagement.parsistence.models.AccountModified;
-import com.example.demo.loanManagement.parsistence.models.Charges;
-import com.example.demo.loanManagement.parsistence.models.LoanAccount;
-import com.example.demo.loanManagement.parsistence.models.Products;
+import com.example.demo.loanManagement.parsistence.entities.Charges;
+import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.loanManagement.parsistence.entities.Products;
 import com.example.demo.loanManagement.parsistence.models.productCreation;
 import com.example.demo.loanManagement.services.ChargeServiceImpl;
 import com.example.demo.loanManagement.services.LoanAccountService;

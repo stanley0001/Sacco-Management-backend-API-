@@ -13,9 +13,11 @@ public class MvcConfig {
     public WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> containerCustomizer() {
         return container -> {
             container.addErrorPages(new ErrorPage(HttpStatus.UNAUTHORIZED,
-                    "/welcome"));
+//                    "/welcome"));
+                    "/"));
             container.addErrorPages(new ErrorPage(HttpStatus.NOT_FOUND,
-                    "/welcome"));
+//                    "/welcome"));
+                    "/"));
         };
     }
 

@@ -1,4 +1,4 @@
-package com.example.demo.loanManagement.parsistence.models;
+package com.example.demo.loanManagement.parsistence.entities;
 
 import javax.persistence.*;
 

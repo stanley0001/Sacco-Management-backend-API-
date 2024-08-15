@@ -1,7 +1,7 @@
 package com.example.demo.loanManagement.services;
 
 
-import com.example.demo.loanManagement.parsistence.models.Charges;
+import com.example.demo.loanManagement.parsistence.entities.Charges;
 
 import java.util.Optional;
 

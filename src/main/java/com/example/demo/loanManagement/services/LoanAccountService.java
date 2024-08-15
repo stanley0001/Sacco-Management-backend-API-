@@ -3,6 +3,7 @@ package com.example.demo.loanManagement.services;
 import com.example.demo.banking.parsitence.repositories.PaymentRepo;
 import com.example.demo.communication.parsitence.models.Email;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.loanManagement.parsistence.entities.*;
 import com.example.demo.loanManagement.parsistence.models.*;
 import com.example.demo.loanManagement.parsistence.repositories.*;
 import com.example.demo.communication.services.CommunicationService;
@@ -121,7 +122,7 @@ public class LoanAccountService {
     public LocalDateTime getDueDate(Long accountId){
         LoanAccount account=findById(accountId).get();
         Long applicationId=account.getApplicationId();
-        loanApplication application =applicationRepo.findById(applicationId).get();
+        LoanApplication application =applicationRepo.findById(applicationId).get();
         Long loanDuration=Long.valueOf(application.getLoanTerm());
         LocalDateTime dueDate=LocalDateTime.now().plusDays(loanDuration);
         return dueDate;
@@ -147,7 +148,7 @@ public class LoanAccountService {
         log.info("creating a schedule");
        backbone.createSchedule(schedule);
        //CHeck customer overpayments and offset the current account
-        loanApplication application=applicationRepo.findById(account.getApplicationId()).get();
+        LoanApplication application=applicationRepo.findById(account.getApplicationId()).get();
         String cusPhone=application.getCustomerMobileNumber();
         Optional<List<SuspensePayments>> suspensePayments=findAllOverPayment(cusPhone);
     if (!suspensePayments.get().isEmpty()){
@@ -234,7 +235,7 @@ public class LoanAccountService {
  //calculation of charges
     public void ChargeCalculator(LoanAccount TransactionalAccount,String chargeType){
         log.info("Calculating charges");
-        loanApplication application=applicationRepo.findById(Long.valueOf(TransactionalAccount.getApplicationId())).get();
+        LoanApplication application=applicationRepo.findById(Long.valueOf(TransactionalAccount.getApplicationId())).get();
         log.info("Loan application Found {}",application);
         Charges charge= chargeServiceImpl.getChargeByProductIdAndName(productService.findByProductCode(application.getProductCode()).getId().toString(),chargeType).orElse(null);
         log.info("Charge1 {}",charge);

@@ -9,6 +9,7 @@ import com.example.demo.loanManagement.services.LoanAccountService;
 import com.example.demo.loanManagement.services.ProductService;
 import com.example.demo.loanManagement.services.SubscriptionService;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.util.Optional;
 
@@ -19,7 +20,12 @@ public final ProductService productService;
 public final CustomerService customerService;
 public final LoanAccountService loanAccountService;
 
-    public InternalChecks(SubscriptionService subscriptionService, ProductService productService, CustomerService customerService, LoanAccountService loanAccountService) {
+    public InternalChecks(
+            SubscriptionService subscriptionService, 
+            ProductService productService, 
+            CustomerService customerService, 
+            @Qualifier("loanAccountService") LoanAccountService loanAccountService
+    ) {
         this.subscriptionService = subscriptionService;
         this.productService = productService;
         this.customerService = customerService;

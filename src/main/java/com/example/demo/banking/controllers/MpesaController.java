@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @Log4j2
-@RequestMapping("brains")
+@RequestMapping("/api/brains")
 public class MpesaController {
     public final BankingService bankingService;
 

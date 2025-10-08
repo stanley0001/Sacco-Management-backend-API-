@@ -18,8 +18,13 @@ import java.time.LocalDateTime;
 public class Backbone {
     public final TransactionsRepo transactionsRepo;
     public final ScheduleRepo scheduleRepo;
-@Autowired
-public Test test;
+    
+    private TestService testService;
+    
+    @Autowired
+    public void setTestService(TestService testService) {
+        this.testService = testService;
+    }
     public Backbone(TransactionsRepo transactionsRepo, ScheduleRepo scheduleRepo) {
         this.transactionsRepo = transactionsRepo;
         this.scheduleRepo = scheduleRepo;

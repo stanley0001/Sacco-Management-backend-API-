@@ -1,6 +1,6 @@
 package com.example.demo.userManagements.parsitence.enitities;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity

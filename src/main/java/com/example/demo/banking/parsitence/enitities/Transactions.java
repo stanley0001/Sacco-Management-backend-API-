@@ -2,7 +2,7 @@ package com.example.demo.banking.parsitence.enitities;
 
 import lombok.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity

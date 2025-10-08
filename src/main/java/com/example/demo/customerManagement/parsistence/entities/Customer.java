@@ -3,7 +3,7 @@ package com.example.demo.customerManagement.parsistence.entities;
 import com.example.demo.loanManagement.parsistence.models.LoanBookUpload;
 import lombok.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
 

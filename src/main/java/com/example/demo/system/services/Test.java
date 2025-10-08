@@ -8,15 +8,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class Test {
+public class Test implements TestService {
+    private final LoanAccountRepo loanAccountRepo;
+    private final SuspensePaymentRepo suspensePaymentRepo;
+
     @Autowired
-    public final Backbone backbone;
-    public final LoanAccountRepo loanAccountRepo;
-    public final SuspensePaymentRepo suspensePaymentRepo;
-
-
-    public Test(Backbone backbone,LoanAccountRepo loanAccountRepo, SuspensePaymentRepo suspensePaymentRepo) {
-        this.backbone = backbone;
+    public Test(LoanAccountRepo loanAccountRepo, SuspensePaymentRepo suspensePaymentRepo) {
         this.loanAccountRepo = loanAccountRepo;
         this.suspensePaymentRepo = suspensePaymentRepo;
     }

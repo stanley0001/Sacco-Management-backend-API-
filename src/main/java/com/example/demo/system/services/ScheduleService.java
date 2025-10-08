@@ -4,6 +4,7 @@ import com.example.demo.loanManagement.services.LoanAccountService;
 import com.example.demo.system.parsitence.models.Schedule.Schedule;
 import com.example.demo.system.parsitence.repositories.ScheduleRepo;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,10 @@ public class ScheduleService {
     private final ScheduleRepo scheduleRepo;
     public final LoanAccountService loanAccountService;
 
-    public ScheduleService(ScheduleRepo scheduleRepo, LoanAccountService loanAccountService) {
+    public ScheduleService(
+            ScheduleRepo scheduleRepo, 
+            @Qualifier("loanAccountService") LoanAccountService loanAccountService
+    ) {
         this.scheduleRepo = scheduleRepo;
         this.loanAccountService = loanAccountService;
     }

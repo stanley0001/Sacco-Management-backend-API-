@@ -4,7 +4,7 @@ import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.loanManagement.parsistence.models.LoanBookUpload;
 import lombok.*;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Date;

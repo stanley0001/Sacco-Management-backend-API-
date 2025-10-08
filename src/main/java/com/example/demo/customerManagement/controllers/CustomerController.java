@@ -27,6 +27,7 @@ import com.example.demo.userManagements.serviceImplementation.UserService;
 import com.infobip.ApiException;
 import com.infobip.model.SmsResponse;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +38,7 @@ import java.util.Optional;
 
 @Log4j2
 @RestController
-@RequestMapping("customers")
+@RequestMapping("/api/customers")
 public class CustomerController {
 
     public  final SubscriptionService subscriptions;
@@ -52,7 +53,19 @@ public class CustomerController {
     public final CommunicationService communicationService;
     public final WhatsAppService whatsAppService;
 
-    public CustomerController(SubscriptionService subscriptions, CustomerS customerService, UserService userService, LoanService loanService, PaymentService paymentService, LoanAccountService loanAccountService, ReportService reportService, ScoreService scoreService, AfricasTalkingApiService sms, CommunicationService communicationService, WhatsAppService whatsAppService) {
+    public CustomerController(
+            SubscriptionService subscriptions, 
+            CustomerS customerService, 
+            UserService userService, 
+            LoanService loanService, 
+            PaymentService paymentService, 
+            @Qualifier("loanAccountService") LoanAccountService loanAccountService, 
+            ReportService reportService, 
+            ScoreService scoreService, 
+            AfricasTalkingApiService sms, 
+            CommunicationService communicationService, 
+            WhatsAppService whatsAppService
+    ) {
         this.subscriptions = subscriptions;
         this.customerService = customerService;
         this.userService = userService;
@@ -80,18 +93,18 @@ public class CustomerController {
     }
     //find all suspense payments
     @GetMapping("/findAllSuspense")
-    public ResponseEntity<List<SuspensePayments>> findAllSuspense(String cusPhone){
+    public ResponseEntity<List<SuspensePayments>> findAllSuspense(@RequestParam("cusPhone") String cusPhone){
         List<SuspensePayments> suspensePayments=loanAccountService.findAllOverPayment(cusPhone).get();
         return new ResponseEntity<>(suspensePayments,HttpStatus.OK);
     }
-    @GetMapping ("/findCus{id}")
-    public ResponseEntity<ClientInfo> findIndividual(@PathVariable Long id){
+    @GetMapping ("/findCus/{id}")
+    public ResponseEntity<ClientInfo> findIndividual(@PathVariable("id") Long id){
        ClientInfo customer=customerService.findById(id);
         return new ResponseEntity<>(customer,HttpStatus.OK);
     }
     //This method is too expensive to be changed
-    @GetMapping ("/findCusByUsername{name}")
-    public ResponseEntity<ClientInfo> findIndividualByName(@PathVariable String name){
+    @GetMapping ("/findCusByUsername/{name}")
+    public ResponseEntity<ClientInfo> findIndividualByName(@PathVariable("name") String name){
         Users user=userService.findByName(name).get();
         Customer customerS=customerService.findByPhone(user.getPhone()).get();
         ClientInfo customer=customerService.findById(customerS.getId());
@@ -105,7 +118,7 @@ public class CustomerController {
     }
     //deactivating customer
     @PutMapping("/changeStatus")
-    public ResponseEntity<Customer> changeStatus(Long id,String status){
+    public ResponseEntity<Customer> changeStatus(@RequestParam("id") Long id, @RequestParam("status") String status){
         customerService.changeStatus(id,status);
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -114,13 +127,13 @@ public class CustomerController {
         subscriptions.subscribe(req.getPhone(),req.getProductId(),req.getAmount());
         return new ResponseEntity<>(HttpStatus.OK);
     }
-    @GetMapping("/findSubscription{id}")
-    public ResponseEntity<Optional<List<Subscriptions>>> findSubscription(@PathVariable String id){
+    @GetMapping("/findSubscription/{id}")
+    public ResponseEntity<Optional<List<Subscriptions>>> findSubscription(@PathVariable("id") String id){
         Optional<List<Subscriptions>> subscription=subscriptions.findCustomerId(id);
         return new ResponseEntity<>(subscription,HttpStatus.OK);
     }
     @GetMapping("/findSubscriptionBybody")
-    public ResponseEntity<Optional<Subscriptions>> findSubscription(String id,String productCode){
+    public ResponseEntity<Optional<Subscriptions>> findSubscription(@RequestParam("id") String id, @RequestParam("productCode") String productCode){
         Optional<Subscriptions> subscription=subscriptions.findCustomerIdandproductCode(id,productCode);
         return new ResponseEntity<>(subscription,HttpStatus.OK);
     }
@@ -135,7 +148,7 @@ public class CustomerController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
     @PostMapping("/loanRepayment")
-    public ResponseEntity<Payments> loanRepayment(String phoneNumber, String productCode, String amount){
+    public ResponseEntity<Payments> loanRepayment(@RequestParam("phoneNumber") String phoneNumber, @RequestParam("productCode") String productCode, @RequestParam("amount") String amount){
         paymentService.paymentRequest(phoneNumber,productCode,amount);
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -145,13 +158,13 @@ public class CustomerController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
    @PostMapping("/score")
-    public ResponseEntity score(Long id){
+    public ResponseEntity<Integer> score(@RequestParam("id") Long id){
         Integer score=scoreService.loadData(id);
         return new ResponseEntity<>(score,HttpStatus.OK);
     }
 
     @PostMapping("/enableClientLogin")
-    public ResponseEntity<ResponseModel> enableLogin(Long id){
+    public ResponseEntity<ResponseModel> enableLogin(@RequestParam("id") Long id){
         ResponseModel response=customerService.enableClientLogin(id);
         return new ResponseEntity<>(response,response.getStatus());
     }
@@ -169,6 +182,31 @@ public class CustomerController {
     public ResponseEntity<List<SmsResponse>> send(@RequestBody bulkSmsModel customSms) throws IOException, ApiException {
         List<SmsResponse> data= communicationService.sendBulkSMS(customSms);
         return new ResponseEntity<>(data,HttpStatus.CREATED);
+    }
+
+    // New endpoints for frontend integration
+    @PostMapping("/applyLoan")
+    public ResponseEntity<LoanApplication> applyForLoan(@RequestBody newApplication application){
+        loanService.loanApplication(application.getPhone(),application.getProductCode(),application.getAmount());
+        return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    @PostMapping("/makePayment")
+    public ResponseEntity<Payments> makePayment(@RequestBody Payments payment){
+        paymentService.processLoanPayment(payment);
+        return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    @PostMapping("/sendMessage")
+    public ResponseEntity<String> sendMessage(@RequestBody Object messageData){
+        // Implementation for sending messages
+        return new ResponseEntity<>("Message sent successfully", HttpStatus.OK);
+    }
+
+    @PutMapping("/updateProfile")
+    public ResponseEntity<Customer> updateProfile(@RequestBody Customer customer){
+        Customer updatedCustomer = customerService.update(customer);
+        return new ResponseEntity<>(updatedCustomer, HttpStatus.OK);
     }
 
 

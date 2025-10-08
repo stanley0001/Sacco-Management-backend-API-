@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
             this.auth = auth;
         }
 
-        @PostMapping("authenticate")
+        @PostMapping("api/authenticate")
          public ResponseEntity<AuthResponse> createAuthenticationToken(@RequestBody login authenticationRequest){
               AuthResponse response=auth.auth(authenticationRequest);
             return new ResponseEntity<>(response,response.getHttpStatus());

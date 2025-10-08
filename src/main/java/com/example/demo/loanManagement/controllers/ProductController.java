@@ -10,6 +10,7 @@ import com.example.demo.loanManagement.services.LoanAccountService;
 import com.example.demo.loanManagement.services.ProductService;
 import com.example.demo.system.services.Bps;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +20,7 @@ import java.util.Optional;
 
 @RestController
 @Log4j2
-@RequestMapping("/products")
+@RequestMapping("/api/products")
 public class ProductController {
 
 
@@ -28,7 +29,12 @@ public class ProductController {
     public final LoanAccountService loanAccountService;
     public final Bps bps;
 
-    public ProductController(ProductService productService, ChargeServiceImpl chargeServiceImpl, LoanAccountService loanAccountService, Bps bps) {
+    public ProductController(
+            ProductService productService, 
+            ChargeServiceImpl chargeServiceImpl, 
+            @Qualifier("loanAccountService") LoanAccountService loanAccountService, 
+            Bps bps
+    ) {
         this.productService = productService;
         this.chargeServiceImpl = chargeServiceImpl;
         this.loanAccountService = loanAccountService;
@@ -55,9 +61,9 @@ public class ProductController {
         List<LoanAccount> accounts=loanAccountService.findAll();
         return new ResponseEntity<>(accounts,HttpStatus.OK);
     }
-    @GetMapping("/getLoanAccountId{id}")
-    public ResponseEntity<List<AccountModified>> getAccountById(@PathVariable String id){
-        log.info("Searching loan accounts with customerId {id}",id);
+    @GetMapping("/getLoanAccountId/{id}")
+    public ResponseEntity<List<AccountModified>> getAccountById(@PathVariable("id") String id){
+        log.info("Searching loan accounts with customerId {}",id);
        List<AccountModified> accounts=loanAccountService.findByCustomerId(id);
         return new ResponseEntity<>(accounts,HttpStatus.OK);
     }

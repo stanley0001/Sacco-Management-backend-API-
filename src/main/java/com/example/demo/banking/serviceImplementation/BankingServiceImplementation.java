@@ -19,8 +19,10 @@ import com.example.demo.loanManagement.services.PaymentService;
 import lombok.extern.log4j.Log4j2;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,7 +36,7 @@ public class BankingServiceImplementation implements BankingService {
 
     public final PaymentRepo paymentRepo;
     public  final CustomerService customerService;
-    public final LoanAccountService loanAccountService;
+    private final LoanAccountService loanAccountService;
     private final PaymentService paymentService;
     private final BankAccountRepo bankAccountRepo;
     public final PaymentTransactionRepo transactionsRepo;
@@ -42,7 +44,18 @@ public class BankingServiceImplementation implements BankingService {
     public final emailRepo emailRepo;
     public final InfoBidApiService smsService;
 
-    public BankingServiceImplementation(PaymentRepo paymentRepo, CustomerService customerService, LoanAccountService loanAccountService, PaymentService paymentService, BankAccountRepo bankAccountRepo, PaymentTransactionRepo transactionsRepo, CommunicationService communicationService, com.example.demo.communication.parsitence.repositories.emailRepo emailRepo, InfoBidApiService smsService) {
+    @Autowired
+    public BankingServiceImplementation(
+            PaymentRepo paymentRepo, 
+            CustomerService customerService, 
+            @Qualifier("loanAccountService") LoanAccountService loanAccountService, 
+            PaymentService paymentService, 
+            BankAccountRepo bankAccountRepo, 
+            PaymentTransactionRepo transactionsRepo, 
+            CommunicationService communicationService, 
+            com.example.demo.communication.parsitence.repositories.emailRepo emailRepo, 
+            InfoBidApiService smsService
+    ) {
         this.paymentRepo = paymentRepo;
         this.customerService = customerService;
         this.loanAccountService = loanAccountService;

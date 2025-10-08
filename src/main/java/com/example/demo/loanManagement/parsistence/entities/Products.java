@@ -1,6 +1,6 @@
 package com.example.demo.loanManagement.parsistence.entities;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 public class Products  {
@@ -23,6 +23,16 @@ public class Products  {
     private Boolean interestUpfront;
     private String transactionType;
     private String timeSpan;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "interest_strategy")
+    private InterestStrategy interestStrategy = InterestStrategy.FLAT_RATE;
+    
+    @Column(name = "allow_early_repayment")
+    private Boolean allowEarlyRepayment = true;
+    
+    @Column(name = "early_repayment_penalty")
+    private Double earlyRepaymentPenalty = 0.0;
 
     public Products() {
     }
@@ -174,6 +184,30 @@ public class Products  {
 
     public void setTimeSpan(String timeSpan) {
         this.timeSpan = timeSpan;
+    }
+
+    public InterestStrategy getInterestStrategy() {
+        return interestStrategy;
+    }
+
+    public void setInterestStrategy(InterestStrategy interestStrategy) {
+        this.interestStrategy = interestStrategy;
+    }
+
+    public Boolean getAllowEarlyRepayment() {
+        return allowEarlyRepayment;
+    }
+
+    public void setAllowEarlyRepayment(Boolean allowEarlyRepayment) {
+        this.allowEarlyRepayment = allowEarlyRepayment;
+    }
+
+    public Double getEarlyRepaymentPenalty() {
+        return earlyRepaymentPenalty;
+    }
+
+    public void setEarlyRepaymentPenalty(Double earlyRepaymentPenalty) {
+        this.earlyRepaymentPenalty = earlyRepaymentPenalty;
     }
 
     @Override

@@ -21,13 +21,12 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import javax.mail.*;
-import javax.mail.internet.*;
+import jakarta.mail.*;
+import jakarta.mail.internet.*;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.*;
-
 @Service
 @Log4j2
 @EnableAsync
@@ -91,7 +90,7 @@ public class CommunicationService {
     }
     //email auth
     Properties props = new Properties();
-    Session session = Session.getInstance(props, new javax.mail.Authenticator() {
+    Session session = Session.getInstance(props, new jakarta.mail.Authenticator() {
         protected PasswordAuthentication getPasswordAuthentication() {
             return new PasswordAuthentication("mungaistanley001@gmail.com", "rploampijtiyfbhz");
         }

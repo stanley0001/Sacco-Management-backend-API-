@@ -4,6 +4,10 @@ public class Reset {
     private String email;
     private String reason;
 
+    // No-args constructor required for deserialization
+    public Reset() {
+    }
+
     public Reset(String email, String reason) {
         this.email = email;
         this.reason = reason;

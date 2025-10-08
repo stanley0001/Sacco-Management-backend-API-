@@ -4,7 +4,7 @@ package com.example.demo.userManagements.parsitence.enitities;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +43,10 @@ public class Roles  {
         this.createdAt = createdAt;
         this.addedBy = addedBy;
         this.permissions = permissions;
+    }
+
+    public Long getId() {
+        return roleId;
     }
 
     @Override

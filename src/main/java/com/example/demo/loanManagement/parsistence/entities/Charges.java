@@ -1,6 +1,6 @@
 package com.example.demo.loanManagement.parsistence.entities;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity

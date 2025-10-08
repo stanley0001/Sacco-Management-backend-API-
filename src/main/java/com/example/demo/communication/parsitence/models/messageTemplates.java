@@ -1,6 +1,6 @@
 package com.example.demo.communication.parsitence.models;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity

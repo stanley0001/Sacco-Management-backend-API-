@@ -10,7 +10,6 @@ import com.example.demo.userManagements.parsitence.models.login;
 import com.example.demo.userManagements.parsitence.models.loginHistory;
 import com.example.demo.userManagements.parsitence.repositories.*;
 import lombok.extern.log4j.Log4j2;
-import net.bytebuddy.utility.RandomString;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -22,6 +21,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -46,9 +46,14 @@ public class UserService implements UserDetailsService {
         this.communication = communication;
     }
       public String randomString(){
-          RandomString generatedString = new RandomString();
           log.info("Generating a random string.");
-          return  generatedString.nextString();
+          String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+          SecureRandom random = new SecureRandom();
+          StringBuilder sb = new StringBuilder(12);
+          for (int i = 0; i < 12; i++) {
+              sb.append(chars.charAt(random.nextInt(chars.length())));
+          }
+          return sb.toString();
       }
     public List<Users> saveUser(Users user) {
         log.info("Creating user: "+user.getUserName());

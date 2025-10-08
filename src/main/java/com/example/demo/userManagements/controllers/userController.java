@@ -6,13 +6,14 @@ import com.example.demo.userManagements.parsitence.enitities.Roles;
 import com.example.demo.userManagements.parsitence.enitities.Users;
 import com.example.demo.userManagements.parsitence.enitities.rolePermissions;
 import com.example.demo.userManagements.parsitence.models.*;
+import com.example.demo.userManagements.parsitence.models.Reset;
 import com.example.demo.userManagements.serviceImplementation.UserService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.util.Base64;
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.Optional;
 @RestController
 @CrossOrigin
 @Log4j2
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 public class userController {
     public UserService userService;
 

@@ -1,6 +1,6 @@
 package com.example.demo.loanManagement.parsistence.entities;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
@@ -9,7 +9,13 @@ public class loanTransactions  {
     @Column
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long transactionId;
+    private Long accountId;
+    private String customerId;
+    private Float amount;
     private String transactionType;
+    private String paymentMode;
+    private LocalDateTime transactionDate;
+    private String postedBy;
     private String loanRef;
     private String otherRef;
     private String otherResponses;
@@ -118,6 +124,54 @@ public class loanTransactions  {
 
     public void setTransactionTime(LocalDateTime transactionTime) {
         this.transactionTime = transactionTime;
+    }
+
+    public Long getAccountId() {
+        return accountId;
+    }
+
+    public void setAccountId(Long accountId) {
+        this.accountId = accountId;
+    }
+
+    public String getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(String customerId) {
+        this.customerId = customerId;
+    }
+
+    public Float getAmount() {
+        return amount;
+    }
+
+    public void setAmount(Float amount) {
+        this.amount = amount;
+    }
+
+    public String getPaymentMode() {
+        return paymentMode;
+    }
+
+    public void setPaymentMode(String paymentMode) {
+        this.paymentMode = paymentMode;
+    }
+
+    public LocalDateTime getTransactionDate() {
+        return transactionDate;
+    }
+
+    public void setTransactionDate(LocalDateTime transactionDate) {
+        this.transactionDate = transactionDate;
+    }
+
+    public String getPostedBy() {
+        return postedBy;
+    }
+
+    public void setPostedBy(String postedBy) {
+        this.postedBy = postedBy;
     }
 
     @Override

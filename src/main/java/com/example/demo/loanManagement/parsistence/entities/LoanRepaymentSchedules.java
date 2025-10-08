@@ -3,7 +3,7 @@ package com.example.demo.loanManagement.parsistence.entities;
 import com.example.demo.enums.Statuses;
 import lombok.Data;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Data

@@ -1,6 +1,6 @@
 package com.example.demo.system.parsitence.models.Schedule;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 

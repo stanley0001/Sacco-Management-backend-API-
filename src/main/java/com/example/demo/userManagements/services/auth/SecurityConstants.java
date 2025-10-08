@@ -1,13 +1,15 @@
 package com.example.demo.userManagements.services.auth;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,10 +21,14 @@ import java.util.stream.Collectors;
 
                 private static final long serialVersionUID = -2550185165626007488L;
 
-                public static final long JWT_TOKEN_VALIDITY = 60*60;
+                public static final long JWT_TOKEN_VALIDITY = 60L * 60;
 
                 @Value("${jwt.secret}")
                 private String secret;
+
+                private SecretKey getSigningKey() {
+                        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+                }
 
                 //retrieve username from jwt token
                 public String getUsernameFromToken(String token) {
@@ -38,9 +44,14 @@ import java.util.stream.Collectors;
                         final Claims claims = getAllClaimsFromToken(token);
                         return claimsResolver.apply(claims);
                 }
+
                 //for retrieveing any information from token we will need the secret key
                 private Claims getAllClaimsFromToken(String token) {
-                        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+                        return Jwts.parser()
+                                .verifyWith(getSigningKey())
+                                .build()
+                                .parseSignedClaims(token)
+                                .getPayload();
                 }
 
                 //check if the token has expired
@@ -52,16 +63,20 @@ import java.util.stream.Collectors;
                 //generate token for user
                 public String generateToken(UserDetails userDetails) {
                         Map<String, Object> claims = new HashMap<>();
-                         claims.put("permissions",userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
+                        claims.put("permissions",userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
                         return doGenerateToken(claims, userDetails.getUsername());
                 }
 
                 private String doGenerateToken(Map<String, Object> claims, String subject) {
 
-                        return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
-                                .setIssuer("stanLey")
-                                .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000))
-                                .signWith(SignatureAlgorithm.HS512, secret).compact();
+                        return Jwts.builder()
+                                .claims(claims)
+                                .subject(subject)
+                                .issuedAt(new Date(System.currentTimeMillis()))
+                                .issuer("stanLey")
+                                .expiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000))
+                                .signWith(getSigningKey())
+                                .compact();
                 }
 
                 //validate token

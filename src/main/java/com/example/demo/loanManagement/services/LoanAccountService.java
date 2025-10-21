@@ -3,6 +3,7 @@ package com.example.demo.loanManagement.services;
 import com.example.demo.banking.parsitence.repositories.PaymentRepo;
 import com.example.demo.communication.parsitence.models.Email;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
+import com.example.demo.loanManagement.dto.LoanAccountResponseDto;
 import com.example.demo.loanManagement.parsistence.entities.*;
 import com.example.demo.loanManagement.parsistence.models.*;
 import com.example.demo.loanManagement.parsistence.repositories.*;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Log4j2
@@ -266,6 +268,95 @@ public class LoanAccountService {
         backbone.saveTransaction(transactionData);
         //save loan account
         save(TransactionalAccount);
+    }
+
+    /**
+     * Get all loan accounts enriched with customer and product information
+     */
+    public List<LoanAccountResponseDto> findAllEnriched() {
+        List<LoanAccount> accounts = loanAccountRepo.findAll();
+        return accounts.stream()
+                .map(this::enrichLoanAccount)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get loan accounts by customer ID enriched with information
+     */
+    public List<LoanAccountResponseDto> findByCustomerIdEnriched(String customerId) {
+        List<LoanAccount> accounts = loanAccountRepo.findByCustomerId(customerId);
+        return accounts.stream()
+                .map(this::enrichLoanAccount)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to enrich a single loan account with customer and product info
+     */
+    private LoanAccountResponseDto enrichLoanAccount(LoanAccount account) {
+        LoanAccountResponseDto dto = new LoanAccountResponseDto();
+        
+        // Set loan account fields
+        dto.setId(account.getAccountId());
+        dto.setAccountNumber(account.getLoanref());
+        dto.setApplicationId(account.getApplicationId());
+        dto.setPrincipalAmount(account.getAmount());
+        dto.setPayableAmount(account.getPayableAmount());
+        dto.setAmountPaid(account.getAmountPaid());
+        dto.setBalance(account.getAccountBalance());
+        dto.setStartDate(account.getStartDate());
+        dto.setDueDate(account.getDueDate());
+        dto.setStatus(account.getStatus());
+        dto.setTerm(account.getInstallments());
+        dto.setCustomerId(account.getCustomerId());
+        
+        // Enrich with customer information
+        try {
+            ClientInfo clientInfo = customerService.findById(Long.valueOf(account.getCustomerId()));
+            if (clientInfo != null && clientInfo.getClient() != null) {
+                Customer customer = clientInfo.getClient();
+                dto.setCustomerName(customer.getFirstName() + " " + customer.getLastName());
+                dto.setPhoneNumber(customer.getPhoneNumber());
+            } else {
+                dto.setCustomerName("Unknown");
+                dto.setPhoneNumber("N/A");
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch customer info for customer ID: {}", account.getCustomerId());
+            dto.setCustomerName("Unknown");
+            dto.setPhoneNumber("N/A");
+        }
+        
+        // Enrich with product information from application
+        try {
+            Optional<LoanApplication> applicationOpt = applicationRepo.findById(account.getApplicationId());
+            if (applicationOpt.isPresent()) {
+                LoanApplication application = applicationOpt.get();
+                dto.setProductCode(application.getProductCode());
+                // Try to get product name from Products table
+                try {
+                    Optional<Products> productOpt = productService.findById(Long.valueOf(application.getProductCode()));
+                    if (productOpt.isPresent()) {
+                        Products product = productOpt.get();
+                        dto.setProductName(product.getName());
+                        dto.setInterestRate(product.getInterest() != null ? product.getInterest().doubleValue() : 0.0);
+                    } else {
+                        dto.setProductName(application.getProductCode());
+                        dto.setInterestRate(0.0);
+                    }
+                } catch (Exception ex) {
+                    dto.setProductName(application.getProductCode());
+                    dto.setInterestRate(0.0);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch product info for application ID: {}", account.getApplicationId());
+            dto.setProductCode("N/A");
+            dto.setProductName("N/A");
+            dto.setInterestRate(0.0);
+        }
+        
+        return dto;
     }
 
 }

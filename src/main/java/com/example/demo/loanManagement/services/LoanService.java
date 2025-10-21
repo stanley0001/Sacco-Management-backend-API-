@@ -60,7 +60,7 @@ public class LoanService {
         return  base36;
     }
     Email email=new Email();
-    public void loanApplication(String phoneNumber,String productCode,String amount){
+    public LoanApplication loanApplication(String phoneNumber, String productCode, String amount){
         //get customer details
         log.info("fetching customer");
         Customer customer=customerService.findByPhone(phoneNumber).get();
@@ -139,6 +139,7 @@ public class LoanService {
         }
         //update application status
 
+        return loanApplication;
     }
    public ResponseEntity newApplication(newApplication application){
        log.info("fetching customer");

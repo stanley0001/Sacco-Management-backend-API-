@@ -621,7 +621,8 @@ public class DataSeeder implements CommandLineRunner {
             customer.setExternalStartDate(LocalDate.now().minusDays(random.nextInt(1825))); // Up to 5 years
             customer.setAddress(faker.address().fullAddress());
             customer.setAccountStatus(accountStatuses[random.nextInt(accountStatuses.length)]);
-            customer.setStatus(random.nextBoolean() || random.nextBoolean()); // 75% active
+            customer.setAccountStatusFlag(random.nextBoolean() || random.nextBoolean()); // 75% active
+            customer.setStatus(random.nextBoolean() || random.nextBoolean() ? "ACTIVE" : "INACTIVE"); // Mobile banking status
             customer.setNextOfKin(faker.name().fullName());
             customer.setNextOfKinRelationship(random.nextBoolean() ? "SPOUSE" : random.nextBoolean() ? "PARENT" : "SIBLING");
             customer.setNextOfKinDocumentNumber(String.format("%08d", random.nextInt(100000000)));
@@ -632,8 +633,8 @@ public class DataSeeder implements CommandLineRunner {
             customer.setCreatedBy(users.get(random.nextInt(users.size())).getUserName());
             customer.setReferredBy(random.nextBoolean() ? null : "REF" + random.nextInt(1000));
             customer.setBranchCode("BR" + String.format("%03d", random.nextInt(10) + 1));
-            customer.setCreatedAt(LocalDate.now().minusDays(random.nextInt(1825)));
-            customer.setUpdatedAt(LocalDate.now().minusDays(random.nextInt(30)));
+            customer.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(1825)));
+            customer.setUpdatedAt(LocalDateTime.now().minusDays(random.nextInt(30)));
 
             customers.add(customerRepo.save(customer));
         }

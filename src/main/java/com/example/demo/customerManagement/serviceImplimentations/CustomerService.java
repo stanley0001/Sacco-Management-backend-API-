@@ -156,6 +156,17 @@ public class CustomerService implements CustomerS {
         return customerRepo.findByphoneNumber(customerPhone);
     }
 
+    @Override
+    public Optional<Customer> findCustomerById(Long id) {
+        return customerRepo.findById(id);
+    }
+
+    @Override
+    public void deleteCustomer(Long id) {
+        customerRepo.deleteById(id);
+        log.info("Customer with ID {} has been deleted", id);
+    }
+
     public void sendTransactionalSMS(String phone,String message){
         singleSmsModel sms=new singleSmsModel();
         Email SMS=new Email();

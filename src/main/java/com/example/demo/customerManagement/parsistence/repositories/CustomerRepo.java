@@ -12,6 +12,12 @@ import java.util.Optional;
 public interface CustomerRepo extends JpaRepository<Customer, Long> {
 
     Optional<Customer> findByphoneNumber(String customerPhone);
+    
+    boolean existsByPhoneNumber(String phoneNumber);
+    
+    boolean existsByEmail(String email);
+    
+    boolean existsByDocumentNumber(String documentNumber);
 
     @Query("select c from  Customer c where c.createdAt >= :date")
     List<Customer> findAllByCreatedAtBefore(@Param("date") LocalDate localDate1);

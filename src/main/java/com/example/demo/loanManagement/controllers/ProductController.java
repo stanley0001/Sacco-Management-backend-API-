@@ -1,5 +1,6 @@
 package com.example.demo.loanManagement.controllers;
 
+import com.example.demo.loanManagement.dto.LoanAccountResponseDto;
 import com.example.demo.loanManagement.parsistence.models.AccountModified;
 import com.example.demo.loanManagement.parsistence.entities.Charges;
 import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
@@ -95,6 +96,20 @@ public class ProductController {
         log.info("Updating Product ...."+product);
         Products product1=productService.productRepo.save(product);
         return new ResponseEntity<>(product1,HttpStatus.OK);
+    }
+    
+    @GetMapping("/getAllAccountEnriched")
+    public ResponseEntity<List<LoanAccountResponseDto>> getAllAccountsEnriched(){
+        log.info("Fetching all loan accounts enriched with customer and product data");
+        List<LoanAccountResponseDto> accounts = loanAccountService.findAllEnriched();
+        return new ResponseEntity<>(accounts, HttpStatus.OK);
+    }
+    
+    @GetMapping("/getLoanAccountIdEnriched/{id}")
+    public ResponseEntity<List<LoanAccountResponseDto>> getAccountByIdEnriched(@PathVariable("id") String id){
+        log.info("Searching enriched loan accounts with customerId {}", id);
+        List<LoanAccountResponseDto> accounts = loanAccountService.findByCustomerIdEnriched(id);
+        return new ResponseEntity<>(accounts, HttpStatus.OK);
     }
 
 }

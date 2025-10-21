@@ -11,6 +11,8 @@ public class AuthResponse {
     private HttpStatus httpStatus;
     private String reason;
     private String message;
+    private String refreshToken;
+
     public AuthResponse() {
     }
 
@@ -21,6 +23,14 @@ public class AuthResponse {
         this.message = message;
     }
 
+    public AuthResponse(int httpStatusCode, HttpStatus httpStatus, String reason, String message, String refreshToken) {
+        this.httpStatusCode = httpStatusCode;
+        this.httpStatus = httpStatus;
+        this.reason = reason;
+        this.message = message;
+        this.refreshToken = refreshToken;
+    }
+
     @Override
     public String toString() {
         return "AuthResponse{" +
@@ -28,6 +38,7 @@ public class AuthResponse {
                 ", httpStatus=" + httpStatus +
                 ", reason='" + reason + '\'' +
                 ", accessToken='" + message + '\'' +
+                ", refreshToken='" + refreshToken + '\'' +
                 '}';
     }
 }

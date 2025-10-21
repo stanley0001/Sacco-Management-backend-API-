@@ -67,6 +67,14 @@ import java.util.stream.Collectors;
                         return doGenerateToken(claims, userDetails.getUsername());
                 }
 
+                //generate refresh token for user
+                public String generateRefreshToken(UserDetails userDetails) {
+                        Map<String, Object> claims = new HashMap<>();
+                        claims.put("permissions",userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
+                        claims.put("token_type", "refresh");
+                        return doGenerateRefreshToken(claims, userDetails.getUsername());
+                }
+
                 private String doGenerateToken(Map<String, Object> claims, String subject) {
 
                         return Jwts.builder()
@@ -75,6 +83,17 @@ import java.util.stream.Collectors;
                                 .issuedAt(new Date(System.currentTimeMillis()))
                                 .issuer("stanLey")
                                 .expiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000))
+                                .signWith(getSigningKey())
+                                .compact();
+                }
+
+                private String doGenerateRefreshToken(Map<String, Object> claims, String subject) {
+                        return Jwts.builder()
+                                .claims(claims)
+                                .subject(subject)
+                                .issuedAt(new Date(System.currentTimeMillis()))
+                                .issuer("stanLey")
+                                .expiration(new Date(System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000)) // 7 days
                                 .signWith(getSigningKey())
                                 .compact();
                 }

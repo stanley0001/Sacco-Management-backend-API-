@@ -6,6 +6,7 @@ import lombok.*;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -35,7 +36,8 @@ public class Customer implements Serializable {
     private LocalDate externalStartDate;
     private String address;
     private String AccountStatus;
-    private Boolean status;
+    private Boolean accountStatusFlag;
+    private String status; // Mobile banking status: ACTIVE, PENDING_VERIFICATION, LOCKED, etc.
     private String nextOfKin;
     private String nextOfKinRelationship;
     private String nextOfKinDocumentNumber;
@@ -47,8 +49,17 @@ public class Customer implements Serializable {
     private String createdBy;
     private String referredBy;
     private String branchCode;
-    private LocalDate createdAt;
-    private LocalDate updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "product_id", nullable = true)
+    private LoanBookUpload loanBookUpload;
+
+    // Mobile banking fields
+    private String memberNumber;
+    private String pinHash;
+    private Integer failedPinAttempts = 0;
+    private LocalDateTime lastLogin;
 
     public Customer(LoanBookUpload upload) {
         String[] customerName = upload.getCustomerName().trim().split(" ");

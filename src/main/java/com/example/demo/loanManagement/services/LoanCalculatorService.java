@@ -47,7 +47,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.FLAT_RATE);
+        calc.setStrategy(InterestStrategy.FLAT_RATE.name());
         calc.setSchedule(generateFlatRateSchedule(principal, rate, term));
         
         return calc;
@@ -70,7 +70,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.REDUCING_BALANCE);
+        calc.setStrategy(InterestStrategy.REDUCING_BALANCE.name());
         calc.setSchedule(generateReducingBalanceSchedule(principal, monthlyRate, term, monthlyPayment));
         
         return calc;
@@ -111,7 +111,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(averagePayment));
-        calc.setStrategy(InterestStrategy.DECLINING_BALANCE);
+        calc.setStrategy(InterestStrategy.DECLINING_BALANCE.name());
         calc.setSchedule(generateDecliningBalanceSchedule(principal, rate, term));
         
         return calc;
@@ -132,7 +132,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.SIMPLE_INTEREST);
+        calc.setStrategy(InterestStrategy.SIMPLE_INTEREST.name());
         calc.setSchedule(generateSimpleInterestSchedule(principal, rate, term));
         
         return calc;
@@ -153,7 +153,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.COMPOUND_INTEREST);
+        calc.setStrategy(InterestStrategy.COMPOUND_INTEREST.name());
         calc.setSchedule(generateCompoundInterestSchedule(principal, rate, term));
         
         return calc;
@@ -174,7 +174,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.ADD_ON_INTEREST);
+        calc.setStrategy(InterestStrategy.ADD_ON_INTEREST.name());
         calc.setSchedule(generateAddOnInterestSchedule(principal, rate, term));
         
         return calc;
@@ -312,7 +312,7 @@ public class LoanCalculatorService {
         private double totalInterest;
         private double totalAmount;
         private double monthlyPayment;
-        private InterestStrategy strategy;
+        private String strategy;
         private List<RepaymentScheduleItem> schedule;
     }
 

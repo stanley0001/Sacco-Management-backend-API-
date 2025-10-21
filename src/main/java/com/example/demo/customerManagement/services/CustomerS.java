@@ -15,6 +15,8 @@ public interface CustomerS {
     ResponseModel findAll(int page,int size);
 
     ClientInfo findById(Long id);
+    
+    Optional<Customer> findCustomerById(Long id);
 
     Optional<Customer> findByPhone(String phone);
 
@@ -23,4 +25,6 @@ public interface CustomerS {
     void changeStatus(Long id, String status);
 
     ResponseModel enableClientLogin(Long id);
+    
+    void deleteCustomer(Long id);
 }

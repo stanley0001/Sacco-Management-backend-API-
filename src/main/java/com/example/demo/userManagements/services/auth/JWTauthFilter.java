@@ -31,19 +31,31 @@ public class JWTauthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         final String requestTokenHeader = request.getHeader("Authorization");
+        final String requestURI = request.getRequestURI();
+        final String method = request.getMethod();
+
+        // Skip JWT validation for refresh token endpoint
+        if (requestURI != null && (requestURI.contains("/api/refresh-token") || requestURI.endsWith("/refresh-token"))) {
+            System.out.println("Skipping JWT validation for refresh token request: " + method + " " + requestURI);
+            chain.doFilter(request, response);
+            return;
+        }
 
         String username = null;
         String jwtToken = null;
 // JWT Token is in the form "Bearer token". Remove Bearer word and get
 // only the Token
         if (requestTokenHeader != null && requestTokenHeader.startsWith("Bearer ")) {
-            jwtToken = requestTokenHeader.substring(7);
+            jwtToken = requestTokenHeader.substring(7).trim(); // Trim any whitespace
+            System.out.println("Processing JWT token for URI: " + requestURI);
             try {
                 username = jwtTokenUtil.getUsernameFromToken(jwtToken);
             } catch (IllegalArgumentException e) {
-                System.out.println("Unable to get JWT Token");
+                System.out.println("Unable to get JWT Token: " + e.getMessage());
             } catch (ExpiredJwtException e) {
                 System.out.println("JWT Token has expired");
+            } catch (Exception e) {
+                System.out.println("JWT parsing error: " + e.getMessage());
             }
         }
 

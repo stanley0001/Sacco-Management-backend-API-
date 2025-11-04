@@ -20,7 +20,7 @@ import java.util.Map;
 @RequestMapping("/api/loans/payments")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*", allowCredentials = "true")
 public class LoanPaymentController {
     
     private final LoanPaymentService loanPaymentService;

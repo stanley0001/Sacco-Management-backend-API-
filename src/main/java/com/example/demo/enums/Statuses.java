@@ -4,5 +4,5 @@ public enum Statuses {
     CURRENT,
     PAID,
     DEFAULT,
-    REVERSED,
+    REVERSED, OVERDUE, PENDING,
 }

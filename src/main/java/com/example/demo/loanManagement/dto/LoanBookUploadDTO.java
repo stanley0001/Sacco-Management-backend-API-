@@ -20,6 +20,7 @@ public class LoanBookUploadDTO {
     private String email;
     
     // Loan Details
+    private String loanId; // External loan ID from upload (used as account number)
     private String productCode;
     private String productName;
     private Double principal;
@@ -47,6 +48,7 @@ public class LoanBookUploadDTO {
     private Integer rowNumber;
     private Boolean isValid;
     private String errorMessage;
+    private String warningMessage; // Non-blocking warnings
     
     // Processing Results
     private Boolean isProcessed;

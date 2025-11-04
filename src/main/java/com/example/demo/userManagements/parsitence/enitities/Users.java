@@ -20,6 +20,9 @@ public class Users  {
     private String phone;
     private String documentNumber;
     private Boolean isActive;
+    private String userType; // LOAN_OFFICER, CREDIT_MANAGER, FINANCE_OFFICER, ADMIN
+    private String county; // For credit managers - filter by county
+    private String branchCode; // For branch-level filtering
     private LocalDate createdAt;
     private LocalDate updatedAt;
 
@@ -155,6 +158,30 @@ public class Users  {
         this.roleId = roleId;
     }
 
+    public String getUserType() {
+        return userType;
+    }
+
+    public void setUserType(String userType) {
+        this.userType = userType;
+    }
+
+    public String getCounty() {
+        return county;
+    }
+
+    public void setCounty(String county) {
+        this.county = county;
+    }
+
+    public String getBranchCode() {
+        return branchCode;
+    }
+
+    public void setBranchCode(String branchCode) {
+        this.branchCode = branchCode;
+    }
+
     @Override
     public String toString() {
         return "Users{" +
@@ -168,6 +195,9 @@ public class Users  {
                 ", phone='" + phone + '\'' +
                 ", documentNumber='" + documentNumber + '\'' +
                 ", isActive=" + isActive +
+                ", userType='" + userType + '\'' +
+                ", county='" + county + '\'' +
+                ", branchCode='" + branchCode + '\'' +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 '}';

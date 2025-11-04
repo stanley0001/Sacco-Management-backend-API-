@@ -28,13 +28,14 @@ public class LoanCalculatorController {
     public ResponseEntity<?> calculateLoan(
             @Parameter(description = "Loan principal amount") @RequestParam double principal,
             @Parameter(description = "Product ID") @RequestParam Long productId,
-            @Parameter(description = "Interest calculation strategy") @RequestParam(defaultValue = "REDUCING_BALANCE") String strategyName
+            @Parameter(description = "Interest calculation strategy (optional - defaults to product's strategy)") 
+            @RequestParam(required = false) String strategyName
     ) {
         try {
             // Log incoming request
-            System.out.println("Calculate request - Principal: " + principal + ", ProductId: " + productId + ", Strategy: " + strategyName);
+            System.out.println("Calculate request - Principal: " + principal + ", ProductId: " + productId + ", Strategy param: " + strategyName);
             
-            InterestStrategy strategy = InterestStrategy.valueOf(strategyName.toUpperCase());
+            // First, get the product
             Optional<Products> productOpt = productService.findById(productId);
 
             if (productOpt.isEmpty()) {
@@ -43,23 +44,39 @@ public class LoanCalculatorController {
             }
 
             Products product = productOpt.get();
-            System.out.println("Product found: " + product.getName() + ", MinLimit: " + product.getMinLimit() + ", MaxLimit: " + product.getMaxLimit());
+            System.out.println("Product found: " + product.getName() + ", Product Strategy: " + product.getInterestStrategy());
+            
+            // Determine which strategy to use
+            InterestStrategy strategy;
+            if (strategyName != null && !strategyName.trim().isEmpty()) {
+                // Use URL parameter if provided
+                try {
+                    strategy = InterestStrategy.valueOf(strategyName.trim().toUpperCase());
+                    System.out.println("Using strategy from URL parameter: " + strategy);
+                } catch (IllegalArgumentException e) {
+                    String errorMsg = "Invalid strategy: " + strategyName + ". Valid strategies: " + 
+                        "FLAT_RATE, REDUCING_BALANCE, DECLINING_BALANCE, SIMPLE_INTEREST, COMPOUND_INTEREST, ADD_ON_INTEREST";
+                    System.out.println(errorMsg);
+                    return ResponseEntity.status(400).body(errorMsg);
+                }
+            } else {
+                // Fall back to product's configured strategy
+                strategy = product.getInterestStrategy() != null ? 
+                    product.getInterestStrategy() : InterestStrategy.REDUCING_BALANCE;
+                System.out.println("Using strategy from product settings: " + strategy);
+            }
 
             // Validate loan amount against product limits
             if (principal < product.getMinLimit() || principal > product.getMaxLimit()) {
                 String errorMsg = String.format("Loan amount %.2f is outside product limits (%.2f - %.2f)", 
-                    principal, product.getMinLimit(), product.getMaxLimit());
+                    principal, (double)product.getMinLimit(), (double)product.getMaxLimit());
                 System.out.println(errorMsg);
                 return ResponseEntity.status(400).body(errorMsg);
             }
 
             LoanCalculatorService.LoanCalculation calculation = calculatorService.calculateLoan(principal, product, strategy);
-            System.out.println("Calculation successful");
+            System.out.println("Calculation successful using strategy: " + strategy);
             return ResponseEntity.ok(calculation);
-        } catch (IllegalArgumentException e) {
-            String errorMsg = "Invalid strategy: " + strategyName + ". Valid strategies: FLAT_RATE, REDUCING_BALANCE, DECLINING_BALANCE, SIMPLE_INTEREST, COMPOUND_INTEREST, ADD_ON_INTEREST";
-            System.out.println(errorMsg);
-            return ResponseEntity.status(400).body(errorMsg);
         } catch (Exception e) {
             String errorMsg = "Error calculating loan: " + e.getMessage();
             System.out.println(errorMsg);

@@ -167,6 +167,12 @@
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.2.5</version>
 		</dependency>
+		<!-- Apache Commons IO - Required by Apache POI -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.16.1</version>
+		</dependency>
 		<!-- OpenCSV for CSV Import/Export -->
 		<dependency>
 			<groupId>com.opencsv</groupId>

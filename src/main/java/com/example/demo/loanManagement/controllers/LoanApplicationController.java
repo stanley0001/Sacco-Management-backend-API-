@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,8 +35,12 @@ public class LoanApplicationController {
 
     @GetMapping("/all")
     @Operation(summary = "Get all loan applications")
-    public ResponseEntity<List<LoanApplication>> getAllApplications() {
-        List<LoanApplication> applications = applicationRepo.findAll();
+    public ResponseEntity<Page<LoanApplication>> getAllApplications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<LoanApplication> applications = applicationRepo.findAllByOrderByApplicationTimeDesc(pageable);
         return ResponseEntity.ok(applications);
     }
 
@@ -69,8 +74,28 @@ public class LoanApplicationController {
         try {
             String approvedBy = requestBody != null ? requestBody.get("approvedBy") : "SYSTEM";
             String comments = requestBody != null ? requestBody.get("comments") : "";
+            boolean createAccount = requestBody != null && "true".equalsIgnoreCase(requestBody.get("createAccount"));
             
             LoanApplication approved = approvalService.approveApplication(id, approvedBy, comments);
+            
+            // If createAccount flag is true, create loan account immediately
+            if (createAccount) {
+                try {
+                    Map<String, Object> accountResult = loanService.createLoanAccountFromApplication(id);
+                    return ResponseEntity.ok(Map.of(
+                        "application", approved,
+                        "loanAccount", accountResult,
+                        "message", "Application approved and loan account created successfully"
+                    ));
+                } catch (Exception e) {
+                    log.error("Error creating loan account", e);
+                    return ResponseEntity.ok(Map.of(
+                        "application", approved,
+                        "warning", "Application approved but loan account creation failed: " + e.getMessage()
+                    ));
+                }
+            }
+            
             return ResponseEntity.ok(approved);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -138,12 +163,14 @@ public class LoanApplicationController {
     @Operation(summary = "Submit a new loan application")
     public ResponseEntity<?> applyForLoan(@RequestBody newApplication application) {
         try {
-            log.info("Loan application received for phone: {}, product: {}, amount: {}",
-                application.getPhone(), application.getProductCode(), application.getAmount());
+            log.info("Loan application received for customerId: {}, phone: {}, product: {}, amount: {}",
+                application.getCustomerId(), application.getPhoneNumberValue(), 
+                application.getProductCode(), application.getAmount());
 
             // Call the existing loan service method
             LoanApplication loanApplication = loanService.loanApplication(
-                application.getPhone(),
+                application.getCustomerId(),
+                application.getPhoneNumberValue(),
                 application.getProductCode(),
                 application.getAmount()
             );
@@ -168,6 +195,35 @@ public class LoanApplicationController {
                 "success", false,
                 "message", "Failed to submit loan application",
                 "errorCode", "ERR_INTERNAL_ERROR"
+            ));
+        }
+    }
+    
+    @PostMapping("/{id}/create-account")
+    @Operation(summary = "Create loan account from approved application")
+    public ResponseEntity<?> createLoanAccount(@PathVariable Long id) {
+        try {
+            log.info("Creating loan account for application ID: {}", id);
+            
+            Map<String, Object> result = loanService.createLoanAccountFromApplication(id);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Loan account created successfully",
+                "data", result
+            ));
+            
+        } catch (IllegalStateException e) {
+            log.error("Error creating loan account: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("Unexpected error creating loan account", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "error", "Failed to create loan account: " + e.getMessage()
             ));
         }
     }

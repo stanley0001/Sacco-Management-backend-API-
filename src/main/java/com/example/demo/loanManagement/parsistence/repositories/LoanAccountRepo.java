@@ -44,4 +44,8 @@ public interface LoanAccountRepo extends JpaRepository<LoanAccount, Long> {
     List<LoanAccount> findAmountByStartDateAndStatus(@Param("from") LocalDateTime from,@Param("to") LocalDateTime to, @Param("status") String status);
 
     Optional<LoanAccount> findByLoanref(String loanNumber);
+    
+    // Note: Field name in entity is 'OtherRef' (capital O)
+    @Query("SELECT l FROM LoanAccount l WHERE l.OtherRef = :otherRef")
+    Optional<LoanAccount> findByOtherRef(@Param("otherRef") String otherRef);
 }

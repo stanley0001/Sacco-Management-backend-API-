@@ -94,18 +94,18 @@ public class DataSeeder implements CommandLineRunner {
             assignPermissionsToRoles(roles, permissions);
             List<Users> users = seedUsers(roles);
             seedPasswords(users);
-            List<Customer> customers = seedCustomers(users);
-            List<Products> loanProducts = seedLoanProducts();
-            List<SavingsProduct> savingsProducts = seedSavingsProducts();
-            List<SavingsAccount> savingsAccounts = seedSavingsAccounts(customers, savingsProducts);
-            seedSavingsTransactions(savingsAccounts);
-            List<LoanApplication> loanApplications = seedLoanApplications(customers, loanProducts);
-            List<LoanAccount> loanAccounts = seedLoanAccounts(loanApplications);
-            seedLoanTransactions(loanAccounts);
+//            List<Customer> customers = seedCustomers(users);
+//            List<Products> loanProducts = seedLoanProducts();
+//            List<SavingsProduct> savingsProducts = seedSavingsProducts();
+//            List<SavingsAccount> savingsAccounts = seedSavingsAccounts(customers, savingsProducts);
+//            seedSavingsTransactions(savingsAccounts);
+//            List<LoanApplication> loanApplications = seedLoanApplications(customers, loanProducts);
+//            List<LoanAccount> loanAccounts = seedLoanAccounts(loanApplications);
+//            seedLoanTransactions(loanAccounts);
 
             logger.info("Data seeding completed successfully!");
-            logger.info("Created: {} Customers, {} Users, {} Savings Accounts, {} Loan Accounts",
-                    customers.size(), users.size(), savingsAccounts.size(), loanAccounts.size());
+//            logger.info("Created: {} Customers, {} Users, {} Savings Accounts, {} Loan Accounts",
+//                    customers.size(), users.size(), savingsAccounts.size(), loanAccounts.size());
 
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             logger.warn("Data integrity violation during seeding (likely duplicate data). Application will continue. Error: {}", e.getMessage());
@@ -549,7 +549,7 @@ public class DataSeeder implements CommandLineRunner {
             user.setActive(random.nextBoolean() || random.nextBoolean()); // 75% active
             user.setCreatedAt(LocalDate.now().minusDays(random.nextInt(365)));
             user.setUpdatedAt(LocalDate.now().minusDays(random.nextInt(30)));
-            users.add(userRepository.save(user));
+//            users.add(userRepository.save(user));
         }
 
         logger.info("Created {} users", users.size());

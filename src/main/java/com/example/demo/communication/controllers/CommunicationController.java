@@ -68,9 +68,11 @@ public class CommunicationController {
         Iterable<ContactList> contactList =communicationService.getContactList();
         return new ResponseEntity<>(contactList,HttpStatus.OK);
     }
-    @GetMapping("/Outbox")
-    public ResponseEntity<List<Email>> getOutbox(){
-        List<Email> outbox =communicationService.getOutbox();
-        return new ResponseEntity<>(outbox,HttpStatus.OK);
+    @GetMapping("/customer/{customerId}")
+    public ResponseEntity<List<Email>> getCommunicationsByCustomerId(@PathVariable Long customerId){
+        // For now, return all communications - in a real implementation, 
+        // you'd filter by customer ID
+        List<Email> communications = communicationService.getOutbox();
+        return new ResponseEntity<>(communications, HttpStatus.OK);
     }
 }

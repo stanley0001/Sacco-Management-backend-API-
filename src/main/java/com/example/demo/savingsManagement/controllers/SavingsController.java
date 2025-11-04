@@ -5,11 +5,14 @@ import com.example.demo.savingsManagement.persistence.entities.SavingsProduct;
 import com.example.demo.savingsManagement.persistence.entities.SavingsTransaction;
 import com.example.demo.savingsManagement.services.SavingsAccountService;
 import com.example.demo.savingsManagement.services.SavingsProductService;
-import com.example.demo.system.parsitence.models.ResponseModel;
+import com.example.demo.payments.services.UniversalPaymentService;
+import com.example.demo.payments.dto.UniversalPaymentRequest;
+import com.example.demo.payments.dto.UniversalPaymentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -22,11 +25,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/savings")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Savings Management", description = "APIs for managing savings accounts and transactions")
 public class SavingsController {
 
     private final SavingsAccountService savingsAccountService;
     private final SavingsProductService savingsProductService;
+    private final UniversalPaymentService universalPaymentService;
 
     // ============ SAVINGS ACCOUNTS ============
     
@@ -72,19 +77,100 @@ public class SavingsController {
     // ============ TRANSACTIONS ============
     
     @PostMapping("/accounts/{accountId}/deposit")
-    @Operation(summary = "Deposit to savings account")
-    public ResponseEntity<SavingsTransaction> deposit(
+    @Operation(summary = "Deposit to savings account with M-PESA integration")
+    public ResponseEntity<?> deposit(
             @PathVariable Long accountId,
             @RequestBody DepositRequest request) {
-        SavingsTransaction transaction = savingsAccountService.deposit(
-                accountId,
-                request.getAmount(),
-                request.getPaymentMethod(),
-                request.getPaymentReference(),
-                request.getDescription(),
-                request.getPostedBy()
-        );
-        return new ResponseEntity<>(transaction, HttpStatus.CREATED);
+        
+        try {
+            log.info("🔔 SavingsController deposit called: accountId={}, amount={}, paymentMethod={}, phoneNumber={}", 
+                accountId, request.getAmount(), request.getPaymentMethod(), request.getPhoneNumber());
+            
+            // Check if this is an M-PESA payment
+            if ("M-PESA".equalsIgnoreCase(request.getPaymentMethod()) || 
+                "MPESA".equalsIgnoreCase(request.getPaymentMethod()) ||
+                "M-PESA (STK Push)".equalsIgnoreCase(request.getPaymentMethod())) {
+                
+                // Get savings account to fetch customer details
+                SavingsAccount account = savingsAccountService.getAccountById(accountId);
+                
+                // Create Universal Payment Request for M-PESA STK Push
+                UniversalPaymentRequest mpesaRequest = UniversalPaymentRequest.builder()
+                    .customerId(account.getCustomerId())
+                    .savingsAccountId(accountId)
+                    .amount(request.getAmount())
+                    .phoneNumber(request.getPhoneNumber()) // Frontend should send this
+                    .paymentMethod("MPESA")
+                    .description(request.getDescription() != null ? request.getDescription() : "Savings Deposit")
+                    .transactionType("DEPOSIT")
+                    .initiatedBy(request.getPostedBy())
+                    .sourceModule("ADMIN_PANEL")
+                    .build();
+                
+                // Process M-PESA payment
+                UniversalPaymentResponse mpesaResponse = universalPaymentService.processPayment(mpesaRequest);
+                
+                // Return M-PESA response (includes STK push details)
+                return ResponseEntity.ok(java.util.Map.of(
+                    "success", mpesaResponse.isSuccess(),
+                    "message", mpesaResponse.isSuccess() ? 
+                        "STK Push sent to " + request.getPhoneNumber() + ". Please complete the payment on your phone." :
+                        "Failed to initiate M-PESA payment: " + mpesaResponse.getErrorMessage(),
+                    "checkoutRequestId", mpesaResponse.getCheckoutRequestId() != null ? mpesaResponse.getCheckoutRequestId() : "",
+                    "customerMessage", mpesaResponse.getCustomerMessage(),
+                    "mpesaResponseCode", mpesaResponse.getResponseCode(),
+                    "paymentMethod", "M-PESA STK Push"
+                ));
+                
+            } else {
+                // Regular manual deposit (Cash, Bank, etc.)
+                SavingsTransaction transaction = savingsAccountService.deposit(
+                        accountId,
+                        request.getAmount(),
+                        request.getPaymentMethod(),
+                        request.getPaymentReference(),
+                        request.getDescription(),
+                        request.getPostedBy()
+                );
+                
+                return ResponseEntity.ok(java.util.Map.of(
+                    "success", true,
+                    "message", "Deposit recorded successfully",
+                    "transaction", transaction,
+                    "paymentMethod", request.getPaymentMethod()
+                ));
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.ok(java.util.Map.of(
+                "success", false,
+                "message", "Deposit failed: " + e.getMessage(),
+                "error", e.getClass().getSimpleName()
+            ));
+        }
+    }
+
+    @GetMapping("/deposits/mpesa/status/{checkoutRequestId}")
+    @Operation(summary = "Check M-PESA deposit payment status")
+    public ResponseEntity<?> checkMpesaDepositStatus(@PathVariable String checkoutRequestId) {
+        try {
+            UniversalPaymentResponse statusResponse = universalPaymentService.checkPaymentStatus(checkoutRequestId);
+            
+            return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "paymentStatus", statusResponse.getPaymentStatus() != null ? statusResponse.getPaymentStatus() : "UNKNOWN",
+                "message", statusResponse.getCustomerMessage() != null ? statusResponse.getCustomerMessage() : "Status check completed",
+                "checkoutRequestId", checkoutRequestId,
+                "completed", statusResponse.isPaymentCompleted(),
+                "mpesaResponseCode", statusResponse.getResponseCode() != null ? statusResponse.getResponseCode() : ""
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.ok(java.util.Map.of(
+                "success", false,
+                "message", "Failed to check payment status: " + e.getMessage(),
+                "checkoutRequestId", checkoutRequestId
+            ));
+        }
     }
 
     @PostMapping("/accounts/{accountId}/withdraw")
@@ -179,6 +265,7 @@ public class SavingsController {
         private String paymentReference;
         private String description;
         private String postedBy;
+        private String phoneNumber; // Required for M-PESA STK Push
     }
 
     @Data

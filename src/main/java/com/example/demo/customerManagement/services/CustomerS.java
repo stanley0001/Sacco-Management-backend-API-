@@ -14,6 +14,8 @@ public interface CustomerS {
 
     ResponseModel findAll(int page,int size);
 
+    ResponseModel findAll(int page,int size, String status, String searchTerm);
+
     ClientInfo findById(Long id);
     
     Optional<Customer> findCustomerById(Long id);

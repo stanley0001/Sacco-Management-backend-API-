@@ -1,7 +1,9 @@
 package com.example.demo.customerManagement.controllers;
 
 //import com.africastalking.sms.Recipient;
+import com.example.demo.banking.parsitence.enitities.BankAccounts;
 import com.example.demo.banking.parsitence.enitities.Payments;
+import com.example.demo.banking.services.BankingService;
 import com.example.demo.communication.parsitence.models.WhatsAppMessage;
 import com.example.demo.communication.parsitence.models.bulkSmsModel;
 import com.example.demo.communication.services.AfricasTalkingApiService;
@@ -9,6 +11,7 @@ import com.example.demo.communication.services.CommunicationService;
 import com.example.demo.communication.services.WhatsAppService;
 import com.example.demo.customerManagement.dto.ImportResultDto;
 import com.example.demo.customerManagement.dto.StatusUpdateDto;
+import com.example.demo.customerManagement.dto.CustomerAnalyticsDTO;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.customerManagement.parsistence.models.ClientInfo;
 import com.example.demo.customerManagement.services.CustomerS;
@@ -20,6 +23,7 @@ import com.example.demo.loanManagement.parsistence.models.*;
 import com.example.demo.loanManagement.services.LoanAccountService;
 import com.example.demo.loanManagement.services.LoanService;
 import com.example.demo.loanManagement.services.PaymentService;
+import com.example.demo.loanManagement.services.ProductService;
 import com.example.demo.loanManagement.services.SubscriptionService;
 import com.example.demo.system.parsitence.models.DashBoardData;
 import com.example.demo.system.parsitence.models.ResponseModel;
@@ -43,11 +47,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Log4j2
 @RestController
-@RequestMapping("/api/customers")
+@RequestMapping("api/customers")
 public class CustomerController {
 
     public  final SubscriptionService subscriptions;
@@ -62,6 +67,8 @@ public class CustomerController {
     public final CommunicationService communicationService;
     public final WhatsAppService whatsAppService;
     public final CustomerImportExportService importExportService;
+    private final ProductService productService;
+    private final BankingService bankingService;
 
     public CustomerController(
             SubscriptionService subscriptions, 
@@ -75,7 +82,9 @@ public class CustomerController {
             AfricasTalkingApiService sms, 
             CommunicationService communicationService, 
             WhatsAppService whatsAppService,
-            CustomerImportExportService importExportService
+            CustomerImportExportService importExportService,
+            BankingService bankingService,
+            ProductService productService
     ) {
         this.subscriptions = subscriptions;
         this.customerService = customerService;
@@ -89,19 +98,29 @@ public class CustomerController {
         this.communicationService = communicationService;
         this.whatsAppService = whatsAppService;
         this.importExportService = importExportService;
+        this.bankingService = bankingService;
+        this.productService = productService;
     }
 
     //creating customers
     @PostMapping("/create")
     public ResponseEntity<Customer> createCustomer(@RequestBody Customer customer){
         Customer customer1=customerService.saveCustomer(customer);
+        bankingService.createBankAccounts(customer1);
+        bankingService.processInitialDepositIfPresent(customer1);
         return new ResponseEntity<>(customer1, HttpStatus.CREATED);
     }
     //finding customers info
     @GetMapping("all")
-    public ResponseEntity<ResponseModel> findAll(@RequestParam("page") int page,@RequestParam("size") int size){
-        ResponseModel customers=customerService.findAll(page,size);
-          return new ResponseEntity<>(customers,HttpStatus.OK);
+    public ResponseEntity<ResponseModel> findAll(
+            @RequestParam("page") int page,
+            @RequestParam("size") int size,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "search", required = false) String search
+    ){
+        ResponseModel customers = customerService.findAll(page, size, status, search);
+        HttpStatus responseStatus = customers.getStatus() != null ? customers.getStatus() : HttpStatus.OK;
+        return new ResponseEntity<>(customers,responseStatus);
     }
     //find all suspense payments
     @GetMapping("/findAllSuspense")
@@ -151,8 +170,13 @@ public class CustomerController {
     }
     @PostMapping("/loanApplication")
     public ResponseEntity<LoanApplication> loanApplication(@RequestBody newApplication application){
-       loanService.loanApplication(application.getPhone(),application.getProductCode(),application.getAmount());
-        return new ResponseEntity<>(HttpStatus.OK);
+       LoanApplication loanApp = loanService.loanApplication(
+           application.getCustomerId(),
+           application.getPhoneNumberValue(),
+           application.getProductCode(),
+           application.getAmount()
+       );
+        return new ResponseEntity<>(loanApp, HttpStatus.OK);
     }
     @PostMapping("/whatsappComm")
     public ResponseEntity whatsappComm(@RequestBody WhatsAppMessage message){
@@ -196,11 +220,60 @@ public class CustomerController {
         return new ResponseEntity<>(data,HttpStatus.CREATED);
     }
 
+    /**
+     * Get customer analytics using existing services
+     */
+    @GetMapping("/{customerId}/analytics")
+    public ResponseEntity<CustomerAnalyticsDTO> getCustomerAnalytics(
+            @PathVariable Long customerId,
+            @RequestParam(defaultValue = "12") int months) {
+        try {
+            log.info("Getting analytics for customer ID: {}", customerId);
+            
+            // Use existing services to get data
+            ClientInfo clientInfo = customerService.findById(customerId);
+            if (clientInfo == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            
+            Integer creditScore = scoreService.loadData(customerId);
+            
+            // Build simple analytics response
+            CustomerAnalyticsDTO analytics = CustomerAnalyticsDTO.builder()
+                .creditScore(creditScore != null ? creditScore : 300)
+                .riskLevel(creditScore != null && creditScore >= 600 ? "LOW" : "HIGH")
+                .customerStatus("ACTIVE")
+                .totalTransactions(0)
+                .activeLoans(0)
+                .build();
+                
+            return new ResponseEntity<>(analytics, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error getting customer analytics", e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // New endpoints for frontend integration
     @PostMapping("/applyLoan")
-    public ResponseEntity<LoanApplication> applyForLoan(@RequestBody newApplication application){
-        loanService.loanApplication(application.getPhone(),application.getProductCode(),application.getAmount());
-        return new ResponseEntity<>(HttpStatus.CREATED);
+    public ResponseEntity<?> applyForLoan(@RequestBody newApplication application){
+        try {
+            log.info("Received loan application request - customerId: {}, phone: {}, product: {}, amount: {}", 
+                application.getCustomerId(), application.getPhoneNumberValue(), 
+                application.getProductCode(), application.getAmount());
+            
+            LoanApplication loanApp = loanService.loanApplication(
+                application.getCustomerId(),
+                application.getPhoneNumberValue(), 
+                application.getProductCode(), 
+                application.getAmount()
+            );
+            
+            return new ResponseEntity<>(loanApp, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            log.error("Error processing loan application: {}", e.getMessage());
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 
     @PostMapping("/makePayment")
@@ -313,13 +386,198 @@ public class CustomerController {
             }
 
             customerService.deleteCustomer(id);
-            
+
             log.info("Customer {} deleted successfully", id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } catch (Exception e) {
             log.error("Error deleting customer", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @PostMapping("/{id}/accounts/recreate")
+    public ResponseEntity<?> recreateCustomerAccounts(@PathVariable Long id) {
+        Optional<Customer> customerOptional = customerService.findCustomerById(id);
+        if (customerOptional.isEmpty()) {
+            return new ResponseEntity<>(Map.of(
+                    "success", false,
+                    "error", "Customer not found"
+            ), HttpStatus.NOT_FOUND);
+        }
+
+        Customer customer = customerOptional.get();
+        List<BankAccounts> accounts = bankingService.createBankAccounts(customer);
+        bankingService.processInitialDepositIfPresent(customer);
+
+        List<Map<String, Object>> accountSummaries = accounts.stream().map(account -> {
+            Map<String, Object> summary = new java.util.HashMap<>();
+            summary.put("id", account.getId());
+            summary.put("accountNumber", account.getBankAccount());
+            summary.put("accountType", account.getAccountType());
+            summary.put("description", account.getAccountDescription());
+            summary.put("balance", account.getAccountBalance());
+            summary.put("createdAt", account.getCreatedAt());
+            summary.put("updatedAt", account.getUpdatedAt());
+            return summary;
+        }).toList();
+
+        return new ResponseEntity<>(Map.of(
+                "success", true,
+                "accounts", accountSummaries
+        ), HttpStatus.OK);
+    }
+
+    @PostMapping("/{id}/accounts")
+    public ResponseEntity<?> createAccountForProduct(
+            @PathVariable Long id,
+            @RequestBody CreateAccountRequest request
+    ) {
+        Optional<Customer> customerOptional = customerService.findCustomerById(id);
+        if (customerOptional.isEmpty()) {
+            return new ResponseEntity<>(Map.of(
+                    "success", false,
+                    "error", "Customer not found"
+            ), HttpStatus.NOT_FOUND);
+        }
+
+        if (request == null || request.getProductId() == null) {
+            return new ResponseEntity<>(Map.of(
+                    "success", false,
+                    "error", "productId is required"
+            ), HttpStatus.BAD_REQUEST);
+        }
+
+        var productOptional = productService.findById(request.getProductId());
+        if (productOptional.isEmpty()) {
+            return new ResponseEntity<>(Map.of(
+                    "success", false,
+                    "error", "Product not found"
+            ), HttpStatus.NOT_FOUND);
+        }
+
+        var product = productOptional.get();
+        if (!Boolean.TRUE.equals(product.getActive())) {
+            return new ResponseEntity<>(Map.of(
+                    "success", false,
+                    "error", "Product is not active"
+            ), HttpStatus.BAD_REQUEST);
+        }
+
+        String transactionType = product.getTransactionType() != null ? product.getTransactionType().toUpperCase() : "";
+        if (!transactionType.contains("SAV")) {
+            return new ResponseEntity<>(Map.of(
+                    "success", false,
+                    "error", "Only savings products can create customer accounts"
+            ), HttpStatus.BAD_REQUEST);
+        }
+
+        Customer customer = customerOptional.get();
+        BankAccounts account = bankingService.createAccountForProduct(customer, product, request.getDescription());
+
+        Map<String, Object> accountSummary = Map.of(
+                "id", account.getId(),
+                "accountNumber", account.getBankAccount(),
+                "accountType", account.getAccountType(),
+                "description", account.getAccountDescription(),
+                "balance", account.getAccountBalance(),
+                "createdAt", account.getCreatedAt(),
+                "updatedAt", account.getUpdatedAt()
+        );
+
+        return new ResponseEntity<>(Map.of(
+                "success", true,
+                "account", accountSummary
+        ), HttpStatus.CREATED);
+    }
+
+    public static class CreateAccountRequest {
+        private Long productId;
+        private String description;
+
+        public Long getProductId() {
+            return productId;
+        }
+
+        public void setProductId(Long productId) {
+            this.productId = productId;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
+        }
+    }
+
+    /**
+     * Update credit limit for a subscription
+     * Can be used from client profile to:
+     * 1. Manually override credit limit
+     * 2. Apply calculation rules
+     * POST /api/customers/subscription/updateCreditLimit
+     */
+    @PostMapping("/subscription/updateCreditLimit")
+    public ResponseEntity<?> updateSubscriptionCreditLimit(@RequestBody Map<String, Object> request) {
+        try {
+            Long subscriptionId = Long.parseLong(request.get("subscriptionId").toString());
+            Integer creditLimit = request.get("creditLimit") != null ? 
+                Integer.parseInt(request.get("creditLimit").toString()) : null;
+            Boolean override = request.get("override") != null ? 
+                Boolean.parseBoolean(request.get("override").toString()) : false;
+            String calculationRule = request.get("calculationRule") != null ? 
+                request.get("calculationRule").toString() : null;
+            
+            // If calculation rule provided, calculate the limit
+            if (calculationRule != null && !calculationRule.isEmpty() && creditLimit == null) {
+                // Get subscription to find customer ID
+                Optional<Subscriptions> subOpt = subscriptions.subscriptionsRepo.findById(subscriptionId);
+                if (subOpt.isPresent()) {
+                    Subscriptions sub = subOpt.get();
+                    creditLimit = subscriptions.calculateCreditLimit(
+                        sub.getCustomerId(), 
+                        sub.getProductCode(), 
+                        calculationRule
+                    );
+                }
+            }
+            
+            Subscriptions updated = subscriptions.updateCreditLimit(
+                subscriptionId, 
+                creditLimit, 
+                override,
+                calculationRule
+            );
+            
+            return new ResponseEntity<>(Map.of(
+                "success", true,
+                "message", "Credit limit updated successfully",
+                "subscription", updated
+            ), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error updating credit limit: {}", e.getMessage());
+            return new ResponseEntity<>(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Get available credit limit calculation rules
+     * GET /api/customers/subscription/creditLimitRules
+     */
+    @GetMapping("/subscription/creditLimitRules")
+    public ResponseEntity<List<Map<String, String>>> getCreditLimitRules() {
+        List<Map<String, String>> rules = List.of(
+            Map.of("code", "3X_SAVINGS", "name", "3X Savings Balance", "description", "3 times customer's savings"),
+            Map.of("code", "5X_SAVINGS", "name", "5X Savings Balance", "description", "5 times customer's savings"),
+            Map.of("code", "FIXED_50K", "name", "Fixed 50,000", "description", "Fixed limit of 50,000"),
+            Map.of("code", "FIXED_100K", "name", "Fixed 100,000", "description", "Fixed limit of 100,000"),
+            Map.of("code", "BASED_ON_HISTORY", "name", "Based on History", "description", "Calculate based on repayment history")
+        );
+        return new ResponseEntity<>(rules, HttpStatus.OK);
     }
 
 

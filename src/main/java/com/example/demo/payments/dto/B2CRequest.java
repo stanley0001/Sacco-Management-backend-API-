@@ -19,10 +19,12 @@ public class B2CRequest {
     private String remarks;
     private Long customerId;
     private String commandId; // SalaryPayment, BusinessPayment, PromotionPayment
+    private Long providerConfigId;
+    private String providerCode;
     
     // Validate and format phone number
     public String getFormattedPhoneNumber() {
-        String phone = phoneNumber.replaceAll("[^0-9]", "");
+        String phone = phoneNumber.replaceAll("\\D", "");
         if (phone.startsWith("0")) {
             phone = "254" + phone.substring(1);
         } else if (!phone.startsWith("254")) {

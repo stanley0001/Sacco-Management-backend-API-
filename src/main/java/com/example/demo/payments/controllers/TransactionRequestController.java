@@ -1,5 +1,9 @@
 package com.example.demo.payments.controllers;
 
+import com.example.demo.payments.dto.DepositRequestCommand;
+import com.example.demo.payments.dto.MpesaDepositRequest;
+import com.example.demo.payments.dto.MpesaDepositResponse;
+import com.example.demo.payments.dto.MpesaDepositStatusResponse;
 import com.example.demo.payments.entities.TransactionRequest;
 import com.example.demo.payments.services.TransactionRequestService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,10 +29,48 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Transaction Requests", description = "Manage deposits, withdrawals, and disbursements")
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600, allowCredentials = "true")
 public class TransactionRequestController {
     
     private final TransactionRequestService transactionRequestService;
+
+    /**
+     * Initiate M-PESA deposit (STK push)
+     */
+    @PostMapping("/deposits/mpesa")
+    @Operation(summary = "Initiate M-PESA deposit via STK push")
+    @PreAuthorize("hasAnyAuthority('TRANSACTION_CREATE', 'PAYMENT_INITIATE', 'ADMIN_ACCESS')")
+    public ResponseEntity<MpesaDepositResponse> initiateMpesaDeposit(@RequestBody MpesaDepositRequest request) {
+        log.info("API: Initiating M-PESA deposit for customer {}", request.getCustomerId());
+
+        try {
+            MpesaDepositResponse response = transactionRequestService.initiateMpesaDeposit(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error initiating M-PESA deposit", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get M-PESA deposit status
+     */
+    @GetMapping("/deposits/mpesa/{checkoutRequestId}/status")
+    @Operation(summary = "Get status of an M-PESA deposit")
+    @PreAuthorize("hasAnyAuthority('TRANSACTION_VIEW', 'PAYMENT_VIEW', 'ADMIN_ACCESS')")
+    public ResponseEntity<MpesaDepositStatusResponse> getMpesaDepositStatus(
+        @PathVariable String checkoutRequestId
+    ) {
+        log.info("API: Getting status for checkoutRequestId {}", checkoutRequestId);
+
+        try {
+            MpesaDepositStatusResponse status = transactionRequestService.getMpesaDepositStatus(checkoutRequestId);
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            log.error("Error fetching M-PESA deposit status", e);
+            return ResponseEntity.notFound().build();
+        }
+    }
     
     /**
      * Get all deposits with pagination
@@ -110,6 +152,34 @@ public class TransactionRequestController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    /**
+     * Create transfer request
+     */
+    @PostMapping("/transfers")
+    @Operation(summary = "Create a new internal transfer request")
+    @PreAuthorize("hasAnyAuthority('TRANSACTION_CREATE', 'ADMIN_ACCESS')")
+    public ResponseEntity<?> createTransferRequest(@RequestBody TransferRequestDTO request) {
+        log.info("API: Creating transfer request for customer: {}", request.getCustomerId());
+
+        try {
+            TransactionRequest created = transactionRequestService.createTransferRequest(
+                request.getCustomerId(),
+                request.getCustomerName(),
+                request.getPhoneNumber(),
+                request.getAmount(),
+                request.getSourceAccountId(),
+                request.getTargetAccountId(),
+                request.getDescription(),
+                request.getInitiatedBy()
+            );
+            return ResponseEntity.ok(created);
+        } catch (Exception e) {
+            log.error("Error creating transfer request", e);
+            return ResponseEntity.internalServerError()
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
     
     /**
      * Create deposit request
@@ -121,14 +191,29 @@ public class TransactionRequestController {
         log.info("API: Creating deposit request for customer: {}", request.getCustomerId());
         
         try {
-            TransactionRequest created = transactionRequestService.createDepositRequest(
-                request.getCustomerId(),
-                request.getCustomerName(),
-                request.getPhoneNumber(),
-                request.getAmount(),
-                request.getDescription(),
-                request.getInitiatedBy()
-            );
+            DepositRequestCommand command = DepositRequestCommand.builder()
+                .customerId(request.getCustomerId())
+                .customerName(request.getCustomerName())
+                .phoneNumber(request.getPhoneNumber())
+                .amount(request.getAmount())
+                .description(request.getDescription())
+                .initiatedBy(request.getInitiatedBy())
+                .savingsAccountId(request.getSavingsAccountId())
+                .targetAccountId(request.getTargetAccountId())
+                .loanId(request.getLoanId())
+                .loanReference(request.getLoanReference())
+                .paymentMethod(request.getPaymentMethod())
+                .transactionCategory(request.getTransactionCategory())
+                .transactionType(request.getTransactionType())
+                .paymentChannel(request.getPaymentChannel())
+                .providerConfigId(request.getProviderConfigId())
+                .referenceNumber(request.getReferenceNumber())
+                .initialStatus(request.getPaymentChannel() == TransactionRequest.PaymentChannel.MANUAL
+                    ? TransactionRequest.RequestStatus.AWAITING_APPROVAL
+                    : TransactionRequest.RequestStatus.INITIATED)
+                .build();
+
+            TransactionRequest created = transactionRequestService.createDepositRequest(command);
             return ResponseEntity.ok(created);
         } catch (Exception e) {
             log.error("Error creating deposit request", e);
@@ -301,6 +386,17 @@ public class TransactionRequestController {
         private BigDecimal amount;
         private String description;
         private String initiatedBy;
+        private Long savingsAccountId;
+        private Long targetAccountId;
+        private TransactionRequest.PaymentMethodType paymentMethod;
+        private TransactionRequest.TransactionCategory transactionCategory;
+        private TransactionRequest.TransactionType transactionType;
+        private TransactionRequest.PaymentChannel paymentChannel;
+        private Long providerConfigId;
+        private String providerCode;
+        private String referenceNumber;
+        private Long loanId;
+        private String loanReference;
     }
     
     @lombok.Data
@@ -308,6 +404,26 @@ public class TransactionRequestController {
         private Long customerId;
         private String customerName;
         private String phoneNumber;
+        private BigDecimal amount;
+        private String description;
+        private String initiatedBy;
+    }
+
+    @lombok.Data
+    public static class TransferRequestDTO {
+        private Long customerId;
+        private String customerName;
+        private String phoneNumber;
+        private BigDecimal amount;
+        private Long sourceAccountId;
+        private Long targetAccountId;
+        private String description;
+        private String initiatedBy;
+    }
+
+    @lombok.Data
+    public static class ManualPostingDTO {
+        private Long savingsAccountId;
         private BigDecimal amount;
         private String description;
         private String initiatedBy;

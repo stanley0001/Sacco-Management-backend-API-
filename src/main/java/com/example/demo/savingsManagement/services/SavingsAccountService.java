@@ -88,6 +88,35 @@ public class SavingsAccountService {
     }
 
     @Transactional
+    public SavingsTransaction createPendingDeposit(Long accountId, BigDecimal amount, String paymentMethod, 
+                                                   String paymentReference, String description, String postedBy) {
+        log.info("Creating pending deposit record of {} for account: {}", amount, accountId);
+        
+        SavingsAccount account = savingsAccountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Savings account not found: " + accountId));
+        
+        if (!"ACTIVE".equals(account.getStatus())) {
+            throw new RuntimeException("Account is not active. Status: " + account.getStatus());
+        }
+        
+        // Create pending transaction record (does not update account balance yet)
+        SavingsTransaction transaction = new SavingsTransaction();
+        transaction.setSavingsAccountId(accountId);
+        transaction.setTransactionRef(generateTransactionRef());
+        transaction.setTransactionType("DEPOSIT");
+        transaction.setAmount(amount);
+        transaction.setBalanceBefore(account.getBalance());
+        transaction.setBalanceAfter(account.getBalance()); // Balance unchanged until completion
+        transaction.setPaymentMethod(paymentMethod);
+        transaction.setPaymentReference(paymentReference);
+        transaction.setDescription(description);
+        transaction.setPostedBy(postedBy);
+        transaction.setStatus("PENDING"); // Key difference - PENDING status
+        
+        return transactionRepository.save(transaction);
+    }
+
+    @Transactional
     public SavingsTransaction withdraw(Long accountId, BigDecimal amount, String paymentMethod,
                                        String description, String postedBy) {
         log.info("Processing withdrawal of {} from account: {}", amount, accountId);

@@ -39,7 +39,45 @@ public class LoanAccount {
     @Column(nullable = false)
     private  String loanref;
     private Integer installments;
+    
+    // Additional fields for enhanced loan management
+    private Long productId;
+    // private Long customerId;
+    private java.math.BigDecimal principalAmount;
+    private java.math.BigDecimal interestRate;
+    private Integer term;
+    private java.math.BigDecimal totalAmount;
+    private java.math.BigDecimal outstandingPrincipal;
+    private java.math.BigDecimal outstandingInterest;
+    private java.math.BigDecimal totalOutstanding;
+    private String loanReference;
+    private LocalDate disbursementDate;
+    private LocalDate maturityDate;
+    private LocalDate nextPaymentDate;
+    private String disbursedBy;
+    private String disbursementReference;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    
     public LoanAccount() {
+    }
+    
+    // Getter and setter for term
+    public Integer getTerm() {
+        return term;
+    }
+    
+    public void setTerm(Integer term) {
+        this.term = term;
+    }
+    
+    // Additional getters and setters
+    public Long getId() {
+        return accountId;
+    }
+    
+    public void setId(Long id) {
+        this.accountId = id;
     }
 
     public LoanAccount(Long accountId) {

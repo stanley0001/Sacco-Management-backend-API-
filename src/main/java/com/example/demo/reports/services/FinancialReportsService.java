@@ -1,5 +1,11 @@
 package com.example.demo.reports.services;
 
+import com.example.demo.accounting.entities.ChartOfAccounts;
+import com.example.demo.accounting.entities.JournalEntry;
+import com.example.demo.accounting.entities.JournalEntryLine;
+import com.example.demo.accounting.repositories.ChartOfAccountsRepo;
+import com.example.demo.accounting.repositories.GeneralLedgerRepository;
+import com.example.demo.accounting.repositories.JournalEntryRepo;
 import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
 import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
 import com.example.demo.savingsManagement.persistence.repositories.SavingsAccountRepository;
@@ -19,6 +25,9 @@ public class FinancialReportsService {
 
     private final LoanAccountRepo loanAccountRepo;
     private final SavingsAccountRepository savingsAccountRepo;
+    private final ChartOfAccountsRepo chartOfAccountsRepo;
+    private final GeneralLedgerRepository ledgerRepo;
+    private final JournalEntryRepo journalEntryRepo;
 
     public Map<String, Object> generateBalanceSheet(LocalDate asOfDate) {
         log.info("Generating Balance Sheet as of {}", asOfDate);
@@ -69,7 +78,7 @@ public class FinancialReportsService {
         Map<String, BigDecimal> currentLiabilities = new HashMap<>();
         
         BigDecimal memberDeposits = savingsAccountRepo.getTotalSavingsBalance();
-        currentLiabilities.put("Member Savings Deposits", memberDeposits);
+        currentLiabilities.put("Member Savings Deposits", memberDeposits != null ? memberDeposits : BigDecimal.ZERO);
         currentLiabilities.put("Accounts Payable", BigDecimal.valueOf(150000));
         currentLiabilities.put("Accrued Expenses", BigDecimal.valueOf(75000));
         currentLiabilities.put("Income Tax Payable", BigDecimal.valueOf(100000));
@@ -219,10 +228,12 @@ public class FinancialReportsService {
         // Calculate totals
         BigDecimal totalDebits = accounts.stream()
                 .map(acc -> (BigDecimal) acc.get("debit"))
+                .filter(debit -> debit != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         BigDecimal totalCredits = accounts.stream()
                 .map(acc -> (BigDecimal) acc.get("credit"))
+                .filter(credit -> credit != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         trialBalance.put("accounts", accounts);
@@ -298,5 +309,61 @@ public class FinancialReportsService {
         account.put("debit", debit);
         account.put("credit", credit);
         return account;
+    }
+
+    /**
+     * Get account balance from Chart of Accounts
+     */
+    private BigDecimal getAccountBalance(String accountCode, LocalDate asOfDate) {
+        try {
+            Double balance = ledgerRepo.getAccountBalance(accountCode, asOfDate);
+            return balance != null ? BigDecimal.valueOf(balance) : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Error getting balance for account {}: {}", accountCode, e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Get sum of balances for account range (e.g., all accounts starting with "5" for expenses)
+     */
+    private BigDecimal getAccountRangeBalance(String prefix, LocalDate asOfDate) {
+        List<ChartOfAccounts> accounts = chartOfAccountsRepo.findAll();
+        return accounts.stream()
+                .filter(account -> account.getAccountCode().startsWith(prefix))
+                .map(account -> getAccountBalance(account.getAccountCode(), asOfDate))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Get revenue for period from journal entries
+     */
+    private BigDecimal getRevenueForPeriod(LocalDate startDate, LocalDate endDate) {
+        List<JournalEntry> entries = journalEntryRepo.findByTransactionDateBetween(startDate, endDate);
+        
+        return entries.stream()
+                .filter(entry -> entry.getStatus() == JournalEntry.JournalStatus.POSTED || 
+                               entry.getStatus() == JournalEntry.JournalStatus.APPROVED)
+                .flatMap(entry -> entry.getLines().stream())
+                .filter(line -> line.getAccountCode().startsWith("4") && // Revenue accounts
+                              line.getType() == JournalEntryLine.EntryType.CREDIT)
+                .map(line -> BigDecimal.valueOf(line.getAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Get expenses for period from journal entries
+     */
+    private BigDecimal getExpensesForPeriod(LocalDate startDate, LocalDate endDate) {
+        List<JournalEntry> entries = journalEntryRepo.findByTransactionDateBetween(startDate, endDate);
+        
+        return entries.stream()
+                .filter(entry -> entry.getStatus() == JournalEntry.JournalStatus.POSTED || 
+                               entry.getStatus() == JournalEntry.JournalStatus.APPROVED)
+                .flatMap(entry -> entry.getLines().stream())
+                .filter(line -> line.getAccountCode().startsWith("5") && // Expense accounts
+                              line.getType() == JournalEntryLine.EntryType.DEBIT)
+                .map(line -> BigDecimal.valueOf(line.getAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

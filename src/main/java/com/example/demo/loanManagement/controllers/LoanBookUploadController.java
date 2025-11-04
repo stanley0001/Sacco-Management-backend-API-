@@ -12,7 +12,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,7 +26,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Loan Book Upload", description = "Upload and import existing loan books")
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class LoanBookUploadController {
     
     private final LoanBookTemplateService templateService;
@@ -38,7 +36,6 @@ public class LoanBookUploadController {
      */
     @GetMapping("/template")
     @Operation(summary = "Download loan book upload template")
-    @PreAuthorize("hasAnyAuthority('VIEW_CUSTOM_LOAN_BOOK_UPLOAD', 'ADMIN_ACCESS')")
     public ResponseEntity<byte[]> downloadTemplate() {
         log.info("API: Downloading loan book template");
         
@@ -70,7 +67,6 @@ public class LoanBookUploadController {
      */
     @PostMapping("/upload")
     @Operation(summary = "Upload loan book file for validation")
-    @PreAuthorize("hasAnyAuthority('VIEW_CUSTOM_LOAN_BOOK_UPLOAD', 'ADMIN_ACCESS')")
     public ResponseEntity<?> uploadFile(
         @RequestParam("file") @Parameter(description = "Excel file with loan data") MultipartFile file
     ) {
@@ -83,9 +79,9 @@ public class LoanBookUploadController {
         }
         
         String filename = file.getOriginalFilename();
-        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
+        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls") && !filename.endsWith(".csv"))) {
             return ResponseEntity.badRequest()
-                .body(Map.of("error", "Invalid file type. Please upload an Excel file (.xlsx or .xls)"));
+                .body(Map.of("error", "Invalid file type. Please upload an Excel file (.xlsx, .xls) or CSV file (.csv)"));
         }
         
         if (file.getSize() > 10 * 1024 * 1024) { // 10MB limit
@@ -111,41 +107,40 @@ public class LoanBookUploadController {
                 .body(Map.of("error", "Unexpected error: " + e.getMessage()));
         }
     }
-    
+
     /**
      * Import validated loans into the system
      */
     @PostMapping("/import")
     @Operation(summary = "Import validated loans into the system")
-    @PreAuthorize("hasAnyAuthority('VIEW_CUSTOM_LOAN_BOOK_UPLOAD', 'ADMIN_ACCESS')")
     public ResponseEntity<?> importLoans(
         @RequestBody @Parameter(description = "List of validated loans to import") List<LoanBookUploadDTO> loans
     ) {
         log.info("API: Importing {} loans", loans.size());
-        
+
         if (loans == null || loans.isEmpty()) {
             return ResponseEntity.badRequest()
                 .body(Map.of("error", "No loans to import"));
         }
-        
+
         // Verify all loans are valid
         long invalidCount = loans.stream()
             .filter(loan -> loan.getIsValid() == null || !loan.getIsValid())
             .count();
-        
+
         if (invalidCount > 0) {
             return ResponseEntity.badRequest()
                 .body(Map.of("error", "Cannot import invalid loans. " + invalidCount + " loans are invalid"));
         }
-        
+
         try {
             LoanBookUploadService.ImportResult result = uploadService.importLoans(loans);
-            
-            log.info("Import complete: {} successful, {} failed", 
+
+            log.info("Import complete: {} successful, {} failed",
                 result.getSuccessCount(), result.getFailureCount());
-            
+
             return ResponseEntity.ok(result);
-            
+
         } catch (Exception e) {
             log.error("Error importing loans", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -158,7 +153,6 @@ public class LoanBookUploadController {
      */
     @GetMapping("/stats")
     @Operation(summary = "Get loan book upload statistics")
-    @PreAuthorize("hasAnyAuthority('VIEW_CUSTOM_LOAN_BOOK_UPLOAD', 'ADMIN_ACCESS')")
     public ResponseEntity<?> getUploadStats() {
         log.info("API: Getting upload statistics");
         
@@ -179,7 +173,6 @@ public class LoanBookUploadController {
      */
     @PostMapping("/validate")
     @Operation(summary = "Validate a single loan entry")
-    @PreAuthorize("hasAnyAuthority('VIEW_CUSTOM_LOAN_BOOK_UPLOAD', 'ADMIN_ACCESS')")
     public ResponseEntity<?> validateLoan(
         @RequestBody @Parameter(description = "Loan data to validate") LoanBookUploadDTO loan
     ) {

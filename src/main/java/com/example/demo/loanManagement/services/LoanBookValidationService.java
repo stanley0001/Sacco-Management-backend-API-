@@ -10,9 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -35,10 +36,9 @@ public class LoanBookValidationService {
         log.info("Validating {} loans", loans.size());
         
         List<LoanBookUploadDTO> validatedLoans = new ArrayList<>();
-        Set<String> processedCustomers = new HashSet<>();
         
         for (LoanBookUploadDTO loan : loans) {
-            validateLoan(loan, processedCustomers);
+            validateLoan(loan);
             validatedLoans.add(loan);
         }
         
@@ -49,8 +49,9 @@ public class LoanBookValidationService {
     /**
      * Validate a single loan
      */
-    private void validateLoan(LoanBookUploadDTO loan, Set<String> processedCustomers) {
+    private void validateLoan(LoanBookUploadDTO loan) {
         List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
         
         // Validate required fields
         validateRequiredFields(loan, errors);
@@ -70,24 +71,17 @@ public class LoanBookValidationService {
         // Validate dates
         validateDates(loan, errors);
         
-        // Validate status
-        validateStatus(loan, errors);
+        // Validate status (with warnings)
+        validateStatus(loan, warnings);
         
-        // Validate customer exists
+        // Validate customer exists (warnings only)
         if (loan.getCustomerId() != null) {
-            validateCustomer(loan, errors);
+            validateCustomer(loan, errors, warnings);
         }
         
-        // Validate product exists
+        // Validate product exists (warnings only)
         if (loan.getProductCode() != null) {
-            validateProduct(loan, errors);
-        }
-        
-        // Check for duplicate customer in same upload
-        if (loan.getCustomerId() != null && processedCustomers.contains(loan.getCustomerId())) {
-            errors.add("Duplicate customer in upload. Customer " + loan.getCustomerId() + " appears multiple times");
-        } else if (loan.getCustomerId() != null) {
-            processedCustomers.add(loan.getCustomerId());
+            validateProduct(loan, errors, warnings);
         }
         
         // Set validation result
@@ -97,6 +91,11 @@ public class LoanBookValidationService {
         } else {
             loan.setIsValid(false);
             loan.setErrorMessage(String.join("; ", errors));
+        }
+        
+        // Set warnings (non-blocking)
+        if (!warnings.isEmpty()) {
+            loan.setWarningMessage(String.join("; ", warnings));
         }
     }
     
@@ -179,15 +178,12 @@ public class LoanBookValidationService {
             errors.add("Payments Made cannot be negative");
         }
         
-        // Validate outstanding balance logic
-        if (loan.getPrincipal() != null && loan.getOutstandingBalance() != null && 
-            loan.getOutstandingBalance() > loan.getPrincipal()) {
-            errors.add("Outstanding Balance cannot exceed Principal");
-        }
+        // Note: Outstanding balance CAN exceed principal due to interest, penalties, and late fees
+        // This is a valid business scenario, so we don't validate against it
     }
     
     /**
-     * Validate dates
+     * Validate dates (supports backdating for loan book imports)
      */
     private void validateDates(LoanBookUploadDTO loan, List<String> errors) {
         if (loan.getDisbursementDate() != null) {
@@ -195,9 +191,10 @@ public class LoanBookValidationService {
                 errors.add("Disbursement Date cannot be in the future");
             }
             
-            // Check if date is too old (e.g., more than 10 years ago)
-            if (loan.getDisbursementDate().isBefore(LocalDate.now().minusYears(10))) {
-                errors.add("Disbursement Date is too old (more than 10 years ago)");
+            // Allow backdating without restriction for importing historical loans
+            // Check if date is unreasonably old (e.g., before 1900)
+            if (loan.getDisbursementDate().isBefore(LocalDate.of(1900, 1, 1))) {
+                errors.add("Disbursement Date is unrealistically old (before 1900)");
             }
         }
         
@@ -216,64 +213,112 @@ public class LoanBookValidationService {
     /**
      * Validate status
      */
-    private void validateStatus(LoanBookUploadDTO loan, List<String> errors) {
-        if (loan.getStatus() != null && !VALID_STATUSES.contains(loan.getStatus().toUpperCase())) {
-            errors.add("Invalid status. Must be one of: " + String.join(", ", VALID_STATUSES));
+    private void validateStatus(LoanBookUploadDTO loan, List<String> warnings) {
+        if (loan.getStatus() != null) {
+            String originalStatus = loan.getStatus();
+            String normalizedStatus = loan.getStatus().toUpperCase().trim();
+            
+            // Transform CURRENT to ACTIVE
+            if ("CURRENT".equals(normalizedStatus)) {
+                loan.setStatus("ACTIVE");
+                warnings.add("Status 'CURRENT' transformed to 'ACTIVE'");
+                return;
+            }
+            
+            // Check if status is valid
+            if (!VALID_STATUSES.contains(normalizedStatus)) {
+                // Invalid status - set to ACTIVE as default and warn
+                loan.setStatus("ACTIVE");
+                warnings.add("Invalid status '" + originalStatus + "' changed to 'ACTIVE'. Valid statuses: " + String.join(", ", VALID_STATUSES));
+                return;
+            }
+            
+            // Set normalized status
+            loan.setStatus(normalizedStatus);
         }
         
         // Validate status logic
         if ("CLOSED".equals(loan.getStatus()) && loan.getOutstandingBalance() != null && loan.getOutstandingBalance() > 0) {
-            errors.add("CLOSED loans must have Outstanding Balance of 0");
+            warnings.add("CLOSED loan has Outstanding Balance > 0. Consider reviewing this loan.");
         }
     }
     
     /**
      * Validate customer exists
      */
-    private void validateCustomer(LoanBookUploadDTO loan, List<String> errors) {
+    private void validateCustomer(LoanBookUploadDTO loan, List<String> errors, List<String> warnings) {
         try {
-            Customer customer = customerRepository.findById(Long.parseLong(loan.getCustomerId()))
-                .orElse(null);
-            
-            if (customer == null) {
-                errors.add("Customer not found: " + loan.getCustomerId());
-            } else {
-                // Validate customer name matches
-                String expectedName = (customer.getFirstName() + " " + customer.getLastName()).trim();
-                if (!expectedName.equalsIgnoreCase(loan.getCustomerName().trim())) {
-                    errors.add("Customer name mismatch. Expected: " + expectedName + ", Found: " + loan.getCustomerName());
+            Optional<Customer> optionalCustomer = Optional.empty();
+
+            if (!isEmpty(loan.getCustomerId())) {
+                // First, try to find by external_id (the uploaded customer ID)
+                optionalCustomer = customerRepository.findByExternalId(loan.getCustomerId());
+                
+                // If not found by external_id, try by database ID
+                if (optionalCustomer.isEmpty()) {
+                    try {
+                        optionalCustomer = customerRepository.findById(Long.parseLong(loan.getCustomerId()));
+                    } catch (NumberFormatException e) {
+                        // Not a valid Long ID, skip this check
+                    }
+                }
+
+                // If still not found, try by document number
+                if (optionalCustomer.isEmpty()) {
+                    optionalCustomer = customerRepository.findByDocumentNumber(loan.getCustomerId());
                 }
             }
-        } catch (NumberFormatException e) {
-            errors.add("Invalid Customer ID format");
+
+            // Only create customer if not found by any method
+            if (optionalCustomer.isEmpty()) {
+                optionalCustomer = createCustomerFromLoanUpload(loan);
+            }
+
+            Customer customer = optionalCustomer.orElse(null);
+
+            if (customer == null) {
+                errors.add("Customer not found: " + loan.getCustomerId());
+                return;
+            }
+
+            String expectedName = (customer.getFirstName() + " " + customer.getLastName()).trim();
+            if (!expectedName.equalsIgnoreCase(loan.getCustomerName().trim())) {
+                // Name mismatch is a warning, not an error - use stored customer data
+                warnings.add("Customer name mismatch. Expected: " + expectedName + ", Found: " + loan.getCustomerName() + ". Using stored customer.");
+            }
         } catch (Exception e) {
             log.error("Error validating customer: {}", e.getMessage());
             errors.add("Error validating customer: " + e.getMessage());
         }
     }
-    
+
     /**
      * Validate product exists
      */
-    private void validateProduct(LoanBookUploadDTO loan, List<String> errors) {
+    private void validateProduct(LoanBookUploadDTO loan, List<String> errors, List<String> warnings) {
         try {
-            Products product = productRepo.getByCode(loan.getProductCode())
-                .orElse(null);
-            
+            Optional<Products> optionalProduct = productRepo.getByCode(loan.getProductCode());
+
+            if (optionalProduct.isEmpty()) {
+                optionalProduct = createProductFromLoanUpload(loan);
+            }
+
+            Products product = optionalProduct.orElse(null);
+
             if (product == null) {
                 errors.add("Product not found: " + loan.getProductCode());
             } else {
-                // Validate loan amount against product limits
                 if (loan.getPrincipal() != null) {
-                    if (loan.getPrincipal() < product.getMinLimit()) {
-                        errors.add("Principal below product minimum: " + product.getMinLimit());
+                    if (product.getMinLimit() != null && loan.getPrincipal() < product.getMinLimit()) {
+                        // Product limit violations are warnings, not errors - allow upload to proceed
+                        warnings.add("Principal below product minimum: " + product.getMinLimit() + ". Proceeding with upload.");
                     }
-                    if (loan.getPrincipal() > product.getMaxLimit()) {
-                        errors.add("Principal exceeds product maximum: " + product.getMaxLimit());
+                    if (product.getMaxLimit() != null && loan.getPrincipal() > product.getMaxLimit()) {
+                        // Product limit violations are warnings, not errors - allow upload to proceed
+                        warnings.add("Principal exceeds product maximum: " + product.getMaxLimit() + ". Proceeding with upload.");
                     }
                 }
-                
-                // Set product name if not provided
+
                 if (isEmpty(loan.getProductName())) {
                     loan.setProductName(product.getName());
                 }
@@ -283,10 +328,91 @@ public class LoanBookValidationService {
             errors.add("Error validating product: " + e.getMessage());
         }
     }
-    
-    /**
-     * Helper method to check if string is empty
-     */
+
+    private Optional<Customer> createCustomerFromLoanUpload(LoanBookUploadDTO loan) {
+        Customer customer = fromLoanUpload(loan);
+        customer = customerRepository.save(customer);
+        return Optional.of(customer);
+    }
+
+    private Optional<Products> createProductFromLoanUpload(LoanBookUploadDTO loan) {
+        try {
+            if (isEmpty(loan.getProductCode())) {
+                return Optional.empty();
+            }
+            
+            // Check if product with this name already exists
+            String name = isEmpty(loan.getProductName())
+                ? "Auto-" + loan.getProductCode().trim()
+                : loan.getProductName().trim();
+            
+            Optional<Products> existingByName = productRepo.findByName(name);
+            if (existingByName.isPresent()) {
+                log.info("Product with name '{}' already exists, using existing product", name);
+                return existingByName;
+            }
+
+            Products product = new Products();
+            product.setCode(loan.getProductCode().trim());
+            product.setName(name);
+
+            product.setActive(true);
+            product.setTransactionType("LOAN");
+            product.setTimeSpan("MONTHS");
+
+            if (loan.getTerm() != null && loan.getTerm() > 0) {
+                product.setTerm(loan.getTerm());
+            }
+
+            if (loan.getInterestRate() != null) {
+                product.setInterest((int) Math.round(loan.getInterestRate()));
+            }
+
+            if (loan.getPrincipal() != null && loan.getPrincipal() > 0) {
+                int principal = (int) Math.round(loan.getPrincipal());
+                product.setMinLimit(principal);
+                product.setMaxLimit(principal);
+            }
+
+            product.setTopUp(Boolean.FALSE);
+            product.setRollOver(Boolean.FALSE);
+            product.setDailyInterest(Boolean.FALSE);
+            product.setInterestUpfront(Boolean.FALSE);
+
+            if (!isEmpty(loan.getBranchCode())) {
+                product.setBranchCode(loan.getBranchCode());
+            }
+
+            Products saved = productRepo.save(product);
+            return Optional.ofNullable(saved);
+        } catch (Exception e) {
+            log.error("Error creating product from loan upload: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    public static Customer fromLoanUpload(LoanBookUploadDTO upload) {
+        Customer customer = new Customer();
+
+        if (upload.getCustomerName() != null && !upload.getCustomerName().trim().isEmpty()) {
+            String[] parts = upload.getCustomerName().trim().split(" ");
+            customer.setFirstName(parts.length > 0 ? parts[0] : upload.getCustomerName());
+            customer.setMiddleName(parts.length > 2 ? parts[1] : null);
+            customer.setLastName(parts.length > 2 ? parts[2] : (parts.length > 1 ? parts[1] : null));
+        }
+
+        customer.setPhoneNumber(upload.getPhoneNumber());
+        customer.setEmail(upload.getEmail());
+        customer.setExternalId(upload.getCustomerId());
+        customer.setBranchCode(upload.getBranchCode());
+        customer.setCreatedAt(LocalDateTime.now());
+        customer.setAccountStatusFlag(true);
+        customer.setAccountStatus("ACTIVE");
+        customer.setStatus("ACTIVE");
+
+        return customer;
+    }
+
     private boolean isEmpty(String value) {
         return value == null || value.trim().isEmpty();
     }

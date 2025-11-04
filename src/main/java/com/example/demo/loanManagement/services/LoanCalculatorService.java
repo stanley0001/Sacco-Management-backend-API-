@@ -1,6 +1,7 @@
 package com.example.demo.loanManagement.services;
 
 import com.example.demo.loanManagement.parsistence.entities.InterestStrategy;
+import com.example.demo.loanManagement.parsistence.entities.InterestType;
 import com.example.demo.loanManagement.parsistence.entities.Products;
 import lombok.Data;
 import org.springframework.stereotype.Service;
@@ -16,27 +17,47 @@ public class LoanCalculatorService {
 
     /**
      * Calculate loan details based on principal, product, and strategy
+     * Now respects BOTH interestType (frequency) AND interestStrategy (method)
+     * 
+     * Examples:
+     * - REDUCING_BALANCE + PER_MONTH = Monthly reducing balance
+     * - SIMPLE_INTEREST + PER_YEAR = Annual simple interest (12% p.a.)
+     * - FLAT_RATE + ONCE_TOTAL = One-time flat interest
      */
     public LoanCalculation calculateLoan(double principal, Products product, InterestStrategy strategy) {
         double ratePerPeriod = product.getInterest() / 100.0;
         int term = product.getTerm();
+        String timeSpan = product.getTimeSpan();
         
+        // Determine interest application frequency
+        InterestType interestType = product.getInterestType() != null ? 
+            product.getInterestType() : InterestType.PER_MONTH;
+        
+        // Calculate the multiplier based on frequency (e.g., 12 for PER_MONTH with 12-month term)
+        double multiplier = interestType.getMultiplier(term, timeSpan);
+        
+        System.out.println("Loan Calculation - Strategy: " + strategy + 
+                          ", InterestType: " + interestType + 
+                          ", Multiplier: " + multiplier);
+        
+        // Apply the selected calculation strategy with the frequency multiplier
         return switch (strategy) {
-            case FLAT_RATE -> calculateFlatRate(principal, ratePerPeriod, term);
-            case REDUCING_BALANCE -> calculateReducingBalance(principal, ratePerPeriod, term);
-            case DECLINING_BALANCE -> calculateDecliningBalance(principal, ratePerPeriod, term);
-            case SIMPLE_INTEREST -> calculateSimpleInterest(principal, ratePerPeriod, term);
-            case COMPOUND_INTEREST -> calculateCompoundInterest(principal, ratePerPeriod, term);
-            case ADD_ON_INTEREST -> calculateAddOnInterest(principal, ratePerPeriod, term);
+            case FLAT_RATE -> calculateFlatRate(principal, ratePerPeriod, term, multiplier, interestType);
+            case REDUCING_BALANCE -> calculateReducingBalance(principal, ratePerPeriod, term, multiplier, interestType);
+            case DECLINING_BALANCE -> calculateDecliningBalance(principal, ratePerPeriod, term, multiplier, interestType);
+            case SIMPLE_INTEREST -> calculateSimpleInterest(principal, ratePerPeriod, term, multiplier, interestType);
+            case COMPOUND_INTEREST -> calculateCompoundInterest(principal, ratePerPeriod, term, multiplier, interestType);
+            case ADD_ON_INTEREST -> calculateAddOnInterest(principal, ratePerPeriod, term, multiplier, interestType);
         };
     }
-
+    
     /**
      * FLAT RATE: Interest on original principal only
-     * Total Interest = Principal × Rate × Term
+     * Total Interest = Principal × Rate × Multiplier
+     * Multiplier depends on InterestType (1 for ONCE_TOTAL, term for PER_MONTH, etc.)
      */
-    private LoanCalculation calculateFlatRate(double principal, double rate, int term) {
-        double totalInterest = principal * rate * term;
+    private LoanCalculation calculateFlatRate(double principal, double rate, int term, double multiplier, InterestType interestType) {
+        double totalInterest = principal * rate * multiplier;
         double totalAmount = principal + totalInterest;
         double monthlyPayment = totalAmount / term;
         
@@ -47,8 +68,8 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.FLAT_RATE.name());
-        calc.setSchedule(generateFlatRateSchedule(principal, rate, term));
+        calc.setStrategy("FLAT_RATE (" + interestType.getDisplayName() + ")");
+        calc.setSchedule(generateFlatRateSchedule(principal, totalInterest, term));
         
         return calc;
     }
@@ -57,7 +78,7 @@ public class LoanCalculatorService {
      * REDUCING BALANCE: Interest on outstanding balance (most common)
      * Monthly Interest = Outstanding Balance × Rate
      */
-    private LoanCalculation calculateReducingBalance(double principal, double rate, int term) {
+    private LoanCalculation calculateReducingBalance(double principal, double rate, int term, double multiplier, InterestType interestType) {
         double monthlyRate = rate;
         double monthlyPayment = calculateReducingBalancePayment(principal, monthlyRate, term);
         double totalAmount = monthlyPayment * term;
@@ -70,7 +91,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.REDUCING_BALANCE.name());
+        calc.setStrategy("REDUCING_BALANCE (" + interestType.getDisplayName() + ")");
         calc.setSchedule(generateReducingBalanceSchedule(principal, monthlyRate, term, monthlyPayment));
         
         return calc;
@@ -90,7 +111,7 @@ public class LoanCalculatorService {
     /**
      * DECLINING BALANCE: Fixed principal + declining interest
      */
-    private LoanCalculation calculateDecliningBalance(double principal, double rate, int term) {
+    private LoanCalculation calculateDecliningBalance(double principal, double rate, int term, double multiplier, InterestType interestType) {
         double fixedPrincipal = principal / term;
         double totalInterest = 0;
         double balance = principal;
@@ -111,7 +132,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(averagePayment));
-        calc.setStrategy(InterestStrategy.DECLINING_BALANCE.name());
+        calc.setStrategy("DECLINING_BALANCE (" + interestType.getDisplayName() + ")");
         calc.setSchedule(generateDecliningBalanceSchedule(principal, rate, term));
         
         return calc;
@@ -120,7 +141,7 @@ public class LoanCalculatorService {
     /**
      * SIMPLE INTEREST: P × R × T / 100
      */
-    private LoanCalculation calculateSimpleInterest(double principal, double rate, int term) {
+    private LoanCalculation calculateSimpleInterest(double principal, double rate, int term, double multiplier, InterestType interestType) {
         double totalInterest = (principal * (rate * 100) * term) / 100;
         double totalAmount = principal + totalInterest;
         double monthlyPayment = totalAmount / term;
@@ -132,7 +153,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.SIMPLE_INTEREST.name());
+        calc.setStrategy("SIMPLE_INTEREST (" + interestType.getDisplayName() + ")");
         calc.setSchedule(generateSimpleInterestSchedule(principal, rate, term));
         
         return calc;
@@ -141,7 +162,7 @@ public class LoanCalculatorService {
     /**
      * COMPOUND INTEREST: A = P(1 + r)^n - P
      */
-    private LoanCalculation calculateCompoundInterest(double principal, double rate, int term) {
+    private LoanCalculation calculateCompoundInterest(double principal, double rate, int term, double multiplier, InterestType interestType) {
         double totalAmount = principal * Math.pow(1 + rate, term);
         double totalInterest = totalAmount - principal;
         double monthlyPayment = totalAmount / term;
@@ -153,7 +174,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.COMPOUND_INTEREST.name());
+        calc.setStrategy("COMPOUND_INTEREST (" + interestType.getDisplayName() + ")");
         calc.setSchedule(generateCompoundInterestSchedule(principal, rate, term));
         
         return calc;
@@ -162,7 +183,7 @@ public class LoanCalculatorService {
     /**
      * ADD-ON INTEREST: Interest added upfront
      */
-    private LoanCalculation calculateAddOnInterest(double principal, double rate, int term) {
+    private LoanCalculation calculateAddOnInterest(double principal, double rate, int term, double multiplier, InterestType interestType) {
         double totalInterest = principal * rate * term;
         double totalAmount = principal + totalInterest;
         double monthlyPayment = totalAmount / term;
@@ -174,7 +195,7 @@ public class LoanCalculatorService {
         calc.setTotalInterest(round(totalInterest));
         calc.setTotalAmount(round(totalAmount));
         calc.setMonthlyPayment(round(monthlyPayment));
-        calc.setStrategy(InterestStrategy.ADD_ON_INTEREST.name());
+        calc.setStrategy("ADD_ON_INTEREST (" + interestType.getDisplayName() + ")");
         calc.setSchedule(generateAddOnInterestSchedule(principal, rate, term));
         
         return calc;
@@ -293,6 +314,38 @@ public class LoanCalculatorService {
 
     private List<RepaymentScheduleItem> generateAddOnInterestSchedule(double principal, double rate, int term) {
         return generateFlatRateSchedule(principal, rate, term);
+    }
+    
+    /**
+     * Generate schedule for ONCE_TOTAL interest type
+     * Interest is charged only once, not per period
+     */
+    private List<RepaymentScheduleItem> generateOnceTotalSchedule(double principal, double rate, int term) {
+        List<RepaymentScheduleItem> schedule = new ArrayList<>();
+        // Interest charged ONCE for entire period (not multiplied by term)
+        double totalInterest = principal * rate;
+        double totalAmount = principal + totalInterest;
+        double monthlyPayment = totalAmount / term;
+        double principalPerMonth = principal / term;
+        double interestPerMonth = totalInterest / term;
+        double balance = principal;
+        LocalDate date = LocalDate.now().plusMonths(1);
+        
+        for (int i = 1; i <= term; i++) {
+            RepaymentScheduleItem item = new RepaymentScheduleItem();
+            item.setInstallmentNumber(i);
+            item.setDueDate(date.toString());
+            item.setPrincipalAmount(round(principalPerMonth));
+            item.setInterestAmount(round(interestPerMonth));
+            item.setTotalPayment(round(monthlyPayment));
+            item.setBalanceAfterPayment(round(balance - principalPerMonth));
+            
+            schedule.add(item);
+            balance -= principalPerMonth;
+            date = date.plusMonths(1);
+        }
+        
+        return schedule;
     }
 
     private double round(double value) {

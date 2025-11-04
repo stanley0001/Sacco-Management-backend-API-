@@ -26,11 +26,13 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -99,48 +101,130 @@ public class CustomerService implements CustomerS {
     }
 
     public ResponseModel findAll(int page,int size) {
+        return findAll(page, size, null, null);
+    }
+
+    @Override
+    public ResponseModel findAll(int page, int size, String status, String searchTerm) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Customer> allCustomers = customerRepo.findAll(pageable);
-        ResponseModel responseModel=new ResponseModel();
-        responseModel.setBody(allCustomers.get());
-        responseModel.setSize(allCustomers.getSize());
+
+        String query = (searchTerm != null && !searchTerm.trim().isEmpty()) ? searchTerm.trim() : null;
+        Boolean statusFlag = null;
+        if (status != null && !status.trim().isEmpty()) {
+            if ("active".equalsIgnoreCase(status) || "true".equalsIgnoreCase(status)) {
+                statusFlag = Boolean.TRUE;
+            } else if ("inactive".equalsIgnoreCase(status) || "false".equalsIgnoreCase(status)) {
+                statusFlag = Boolean.FALSE;
+            }
+        }
+
+        Page<Customer> customerPage=findAll(statusFlag, query, pageable);
+
+        ResponseModel responseModel = new ResponseModel();
+        responseModel.setBody(customerPage.getContent());
+        responseModel.setSize(customerPage.getSize());
         responseModel.setPage(page);
-        responseModel.setTotalElements((int) allCustomers.getTotalElements());
-        responseModel.setTotalPages(allCustomers.getTotalPages());
+        responseModel.setTotalElements((int) customerPage.getTotalElements());
+        responseModel.setTotalPages(customerPage.getTotalPages());
         responseModel.setStatus(HttpStatus.OK);
-        responseModel.setMessage(allCustomers.getTotalElements()+" records found");
+        responseModel.setMessage(customerPage.getTotalElements() + " records found");
         return responseModel;
     }
 
+    public Page<Customer> findAll(Boolean statusFlag, String query, Pageable pageable) {
+        Specification<Customer> spec = Specification
+                .where(hasStatus(statusFlag))
+                .and(matchesQuery(query));
+
+        return customerRepo.findAll(spec, pageable);
+    }
+
+    public static Specification<Customer> hasStatus(Boolean status) {
+        return (root, query, cb) ->
+                status == null ? cb.conjunction() :
+                        cb.equal(root.get("accountStatusFlag"), status);
+    }
+
+    public static Specification<Customer> matchesQuery(String search) {
+        return (root, query, cb) -> {
+            if (search == null || search.trim().isEmpty()) {
+                return cb.conjunction();
+            }
+
+            String likePattern = "%" + search.toLowerCase() + "%";
+
+            return cb.or(
+                    cb.like(cb.lower(root.get("firstName")), likePattern),
+                    cb.like(cb.lower(root.get("lastName")), likePattern),
+                    cb.like(cb.lower(root.get("documentNumber")), likePattern),
+                    cb.like(cb.lower(root.get("phoneNumber")), likePattern),
+                    cb.like(cb.lower(root.get("email")), likePattern)
+            );
+        };
+    }
+
     public ClientInfo findById(Long id) {
-        ClientInfo clientInfo=new ClientInfo();
-        Customer client=customerRepo.findById(id).get();
-        String email=client.getEmail();
-        String name=client.getPhoneNumber();
-        Optional<List<Subscriptions>> subscriptions=subscriptionService.findCustomerId(id.toString());
-        List<Email> communication=userService.communication.getOutboxByEmailOrderByIdDesc(email);
-        Optional<Users> user=userService.findByName(name);
-        String idNumber=client.getDocumentNumber();
-        log.info("Fetching application by {}",idNumber);
-        List<BankAccounts> bankAccounts=bankAccountRepo.findByCustomer(client).get();
-        List<LoanApplication> applications=applicationRepo.findByCustomerIdNumber(idNumber);
-        List<Payments> payments=paymentRepo.findAllByCustomer(client);
+        return customerRepo.findById(id)
+                .map(this::buildClientInfo)
+                .orElse(null);
+    }
+
+    public ClientInfo findByDocumentNumber(String documentNumber) {
+        return customerRepo.findByDocumentNumber(documentNumber)
+                .map(this::buildClientInfo)
+                .orElse(null);
+    }
+
+    public ClientInfo findByExternalId(String externalId) {
+        return customerRepo.findByExternalId(externalId)
+                .map(this::buildClientInfo)
+                .orElse(null);
+    }
+
+    /**
+     * Helper method to build ClientInfo from a Customer entity.
+     */
+    private ClientInfo buildClientInfo(Customer client) {
+        ClientInfo clientInfo = new ClientInfo();
+        if (client.getDocumentNumber()==null && client.getExternalId()!=null){
+            client=this.populateDocumentNumber(client,client.getExternalId());
+        }
+        String email = client.getEmail();
+        String name = client.getPhoneNumber();
+        String idNumber = client.getDocumentNumber();
+
+        log.info("Building client info for customer with ID Number: {}", idNumber);
+
+        // Defensive optional handling
+        List<BankAccounts> bankAccounts = bankAccountRepo.findByCustomer(client).orElse(Collections.emptyList());
+        List<LoanApplication> applications = applicationRepo.findByCustomerIdNumber(idNumber);
+        List<Payments> payments = paymentRepo.findAllByCustomer(client);
+        List<Email> communication = userService.communication.getOutboxByEmailOrderByIdDesc(email);
+
+        Optional<List<Subscriptions>> subscriptions = subscriptionService.findCustomerId(client.getId().toString());
+        Optional<Users> user = userService.findByName(name);
+
+        clientInfo.setClient(client);
         clientInfo.setBankAccounts(bankAccounts);
-         clientInfo.setClient(client);
-         clientInfo.setCommunications(communication);
-         clientInfo.setLoanApplications(applications);
-         if (user.isPresent()){
-             clientInfo.setUser(user.get());
-         }
-         if (subscriptions.isPresent()){
-             clientInfo.setSubscriptions(subscriptions.get());
-         }
+        clientInfo.setLoanApplications(applications);
+        clientInfo.setCommunications(communication);
+        clientInfo.setCustomerPayments(payments);
+
+        subscriptions.ifPresent(clientInfo::setSubscriptions);
+        user.ifPresent(clientInfo::setUser);
 
         return clientInfo;
     }
- public List<Transactions> findTransactionsByBank(BankAccounts bankA){
+
+    private Customer populateDocumentNumber(Customer customer,String documentNumber){
+       log.info("populating document number for {}",documentNumber);
+        customer.setDocumentNumber(documentNumber);
+        return customerRepo.save(customer);
+    }
+
+    public List<Transactions> findTransactionsByBank(BankAccounts bankA){
         return transactionsRepo.findAllByBankAccount(bankA);
- }
+    }
     public Customer update(Customer customer) {
         return customerRepo.save(customer);
     }

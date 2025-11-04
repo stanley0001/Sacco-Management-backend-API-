@@ -1,6 +1,7 @@
 package com.example.demo.customerManagement.parsistence.entities;
 
 import com.example.demo.loanManagement.parsistence.models.LoanBookUpload;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import jakarta.persistence.*;
@@ -49,8 +50,13 @@ public class Customer implements Serializable {
     private String createdBy;
     private String referredBy;
     private String branchCode;
+    private String county; // For credit manager filtering
+    private Long assignedLoanOfficerId; // Current loan officer
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    @Column(name = "initial_deposit_amount")
+    @JsonProperty("initialDeposit")
+    private Double initialDepositAmount;
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "product_id", nullable = true)
     private LoanBookUpload loanBookUpload;
@@ -60,6 +66,35 @@ public class Customer implements Serializable {
     private String pinHash;
     private Integer failedPinAttempts = 0;
     private LocalDateTime lastLogin;
+    
+    // Additional fields for bulk processing
+    private Long branchId;
+    private Boolean isActive = true;
+    
+    // Convenience methods for bulk processing compatibility
+    public void setIdNumber(String idNumber) {
+        this.documentNumber = idNumber; // National ID is document number
+    }
+    
+    public String getIdNumber() {
+        return this.documentNumber;
+    }
+    
+    public void setIsActive(boolean isActive) {
+        this.isActive = isActive;
+    }
+    
+    public boolean getIsActive() {
+        return this.isActive != null ? this.isActive : true;
+    }
+    
+    public Long getBranchId() {
+        return this.branchId;
+    }
+    
+    public void setBranchId(Long branchId) {
+        this.branchId = branchId;
+    }
 
     public Customer(LoanBookUpload upload) {
         String[] customerName = upload.getCustomerName().trim().split(" ");

@@ -18,6 +18,8 @@ public class Subscriptions  {
         private Integer term;
         private Integer interestRate;
         private Integer creditLimit;
+        private Boolean creditLimitOverridden;  // True if manually set
+        private String creditLimitCalculationRule;  // Rule used for calculation
         private String timeSpan;
         private LocalDate createdAt;
         private LocalDate updatedAt;
@@ -133,11 +135,27 @@ public class Subscriptions  {
         }
 
     public Integer getCreditLimit() {
-        return creditLimit;
+        return creditLimit==null?0:creditLimit;
     }
 
     public void setCreditLimit(Integer creditLimit) {
         this.creditLimit = creditLimit;
+    }
+
+    public Boolean getCreditLimitOverridden() {
+        return creditLimitOverridden;
+    }
+
+    public void setCreditLimitOverridden(Boolean creditLimitOverridden) {
+        this.creditLimitOverridden = creditLimitOverridden;
+    }
+
+    public String getCreditLimitCalculationRule() {
+        return creditLimitCalculationRule;
+    }
+
+    public void setCreditLimitCalculationRule(String creditLimitCalculationRule) {
+        this.creditLimitCalculationRule = creditLimitCalculationRule;
     }
 
     public String getTimeSpan() {

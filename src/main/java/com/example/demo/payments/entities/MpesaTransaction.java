@@ -79,6 +79,15 @@ public class MpesaTransaction {
     @Column(name = "savings_account_id")
     private Long savingsAccountId;
     
+    @Column(name = "transaction_request_id")
+    private Long transactionRequestId;
+
+    @Column(name = "provider_config_id")
+    private Long providerConfigId;
+
+    @Column(name = "provider_code")
+    private String providerCode;
+
     @Column(name = "initiated_by")
     private String initiatedBy; // User who initiated the transaction
     

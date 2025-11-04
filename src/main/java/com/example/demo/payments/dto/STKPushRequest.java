@@ -20,12 +20,20 @@ public class STKPushRequest {
     
     // Optional: for linking to specific entities
     private Long customerId;
+    private Long accountId;  // Generic account ID for any account type
     private Long loanId;
     private Long savingsAccountId;
     
+    // Optional: provider metadata for multi-tenant configurations
+    private Long providerConfigId;
+    private String providerCode;
+    
+    // Optional: link back to transaction request record
+    private Long transactionRequestId;
+    
     // Validate phone number format
     public String getFormattedPhoneNumber() {
-        String phone = phoneNumber.replaceAll("[^0-9]", "");
+        String phone = phoneNumber.replaceAll("\\D", "");
         if (phone.startsWith("0")) {
             phone = "254" + phone.substring(1);
         } else if (!phone.startsWith("254")) {

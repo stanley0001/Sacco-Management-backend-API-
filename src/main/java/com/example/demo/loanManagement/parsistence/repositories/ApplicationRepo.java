@@ -29,4 +29,6 @@ public interface ApplicationRepo extends JpaRepository<LoanApplication, Long> {
     List<LoanApplication> findByCustomerId(String customerId);
     
     Page<LoanApplication> findByApplicationStatus(String status, Pageable pageable);
+
+    Page<LoanApplication> findAllByOrderByApplicationTimeDesc(Pageable pageable);
 }

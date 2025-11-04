@@ -42,6 +42,14 @@ public class LoanApplication {
     private String installments;
     @Column(nullable = false)
     private LocalDateTime applicationTime;
+    
+    // Additional fields needed for disbursement service
+    private Long productId; // Reference to Products table
+    private Integer term; // Loan term in months
+    private Double amount; // Loan amount as Double
+    private LocalDateTime updatedAt;
+    private String disbursementMethod;
+    private String disbursementDestination;
 
 
 
@@ -58,5 +66,80 @@ public class LoanApplication {
         this.customerMobileNumber=customer.getPhoneNumber();
         this.loanAmount=upload.getLoanAmount();
         this.creditLimit="UPLOAD";
+    }
+    
+    // Custom methods for backward compatibility
+    public String getStatus() {
+        return this.applicationStatus;
+    }
+    
+    public void setStatus(String status) {
+        this.applicationStatus = status;
+    }
+    
+    public Long getProductId() {
+        return this.productId;
+    }
+    
+    public Integer getTerm() {
+        if (this.term != null) {
+            return this.term;
+        }
+        // Try to parse from loanTerm string if available
+        if (this.loanTerm != null) {
+            try {
+                return Integer.parseInt(this.loanTerm);
+            } catch (NumberFormatException e) {
+                return 12; // Default to 12 months
+            }
+        }
+        return 12; // Default term
+    }
+    
+    public Double getAmount() {
+        if (this.amount != null) {
+            return this.amount;
+        }
+        // Try to parse from loanAmount string if available
+        if (this.loanAmount != null) {
+            try {
+                return Double.parseDouble(this.loanAmount.replaceAll(",", ""));
+            } catch (NumberFormatException e) {
+                return 0.0;
+            }
+        }
+        return 0.0;
+    }
+    
+    public Long getId() {
+        return this.applicationId;
+    }
+    
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+    
+    public LocalDateTime getUpdatedAt() {
+        return this.updatedAt;
+    }
+    
+    public void setDisbursementMethod(String disbursementMethod) {
+        this.disbursementMethod = disbursementMethod;
+    }
+    
+    public String getDisbursementMethod() {
+        return this.disbursementMethod;
+    }
+    
+    public void setDisbursementDestination(String disbursementDestination) {
+        this.disbursementDestination = disbursementDestination;
+    }
+    
+    public String getDisbursementDestination() {
+        return this.disbursementDestination;
+    }
+    
+    public String getCustomerId() {
+        return this.customerId;
     }
 }

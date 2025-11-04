@@ -23,10 +23,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Log4j2
@@ -60,23 +57,42 @@ public class LoanService {
         return  base36;
     }
     Email email=new Email();
-    public LoanApplication loanApplication(String phoneNumber, String productCode, String amount){
-        //get customer details
-        log.info("fetching customer");
-        Customer customer=customerService.findByPhone(phoneNumber).get();
+    public LoanApplication loanApplication(Long customerId, String phoneNumber, String productCode, String amount){
+        //get customer details - try by ID first, then by phone
+        Customer customer;
+        if (customerId != null && customerId > 0) {
+            log.info("Fetching customer by ID: {}", customerId);
+            customer = customerService.findCustomerById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + customerId));
+        } else if (phoneNumber != null && !phoneNumber.isEmpty()) {
+            log.info("Fetching customer by phone: {}", phoneNumber);
+            customer = customerService.findByPhone(phoneNumber)
+                .orElseThrow(() -> new RuntimeException("Customer not found with phone number: " + phoneNumber));
+        } else {
+            throw new RuntimeException("Either customerId or phoneNumber must be provided");
+        }
+        
         email.setRecipient(customer.getEmail());
         email.setMessageType("Loan Application");
+        
         //get subscriptions
-        Subscriptions subscription=subscriptionService.findCustomerIdandproductCode(customer.getId().toString(),productCode).get();
+        log.info("Fetching subscription for customer {} and product {}", customer.getId(), productCode);
+        Subscriptions subscription = subscriptionService.findCustomerIdandproductCode(customer.getId().toString(), productCode)
+            .orElseThrow(() -> new RuntimeException("Subscription not found for customer " + customer.getId() + " and product " + productCode));
 
         LoanApplication loanApplication=new LoanApplication();
         //save loan application
         loanApplication.setApplicationTime(LocalDateTime.now());
-        loanApplication.setCreditLimit(subscription.getCreditLimit().toString());
+        
+        // Handle null credit limit and term with fallback to 0
+        Integer creditLimit = subscription.getCreditLimit() != null ? subscription.getCreditLimit() : 0;
+        Integer term = subscription.getTerm() != null ? subscription.getTerm() : 0;
+        
+        loanApplication.setCreditLimit(creditLimit.toString());
         loanApplication.setCustomerId(customer.getId().toString());
         loanApplication.setLoanAmount(amount);
         loanApplication.setProductCode(subscription.getProductCode());
-        loanApplication.setLoanTerm(subscription.getTerm().toString());
+        loanApplication.setLoanTerm(term.toString());
         loanApplication.setCustomerIdNumber(customer.getDocumentNumber());
 
         Long loanNumber=Long.valueOf(new Date().getTime());
@@ -118,7 +134,7 @@ public class LoanService {
             email.setMessage("Hello "+customer.getFirstName()+" your application of Ksh "+loanApplication.getLoanAmount()+"have been Approved please wait for find disbursement");
             communicationService.sendCustomEmail(email);
             Disbursements disbursementData=dispatcher.Disburse(disbursmentData);
-            if(disbursementData.getStatus()=="PROCESSED"){
+            if(disbursementData.getStatus().equals("PROCESSED")){
                 email.setMessageType("Disbursement");
                 email.setMessage("Hello "+customer.getFirstName()+" We have disbursed Ksh "+loanApplication.getLoanAmount()+" To your account");
                 communicationService.sendCustomEmail(email);
@@ -131,7 +147,7 @@ public class LoanService {
 
         }else {
             String errorMessage =internalChecks.Productchecks(data);
-            loanApplication.setApplicationStatus(errorMessage);
+            loanApplication.setApplicationStatus("NEW"); // Set to NEW for manual approval instead of error
          log.warn(errorMessage);
             applicationRepo.save(loanApplication);
             email.setMessage("Hello "+customer.getFirstName()+" your application of Ksh "+loanApplication.getLoanAmount()+" Failed withe the below error :: "+errorMessage);
@@ -347,5 +363,94 @@ public class LoanService {
         LoanAccount loanAccount =new LoanAccount(upload,loanApplication,customer);
         loanAccount=loanAccountRepo.save(loanAccount);
         return  loanAccount;
+    }
+    
+    /**
+     * Create loan account from approved application
+     */
+    public Map<String, Object> createLoanAccountFromApplication(Long applicationId) {
+        log.info("Creating loan account for application ID: {}", applicationId);
+        
+        // Get application
+        LoanApplication application = applicationRepo.findById(applicationId)
+            .orElseThrow(() -> new IllegalStateException("Application not found"));
+        
+        // Verify application is approved
+        if (!"APPROVED".equals(application.getApplicationStatus()) && 
+            !"AUTHORISED".equals(application.getApplicationStatus())) {
+            throw new IllegalStateException("Only APPROVED or AUTHORISED applications can be used to create loan accounts. Current status: " + application.getApplicationStatus());
+        }
+        
+        // Check if loan account already exists for this application
+        Optional<LoanAccount> existingAccount = loanAccountRepo.findByApplicationId(application.getApplicationId());
+        if (existingAccount.isPresent()) {
+            throw new IllegalStateException("Loan account already exists for this application");
+        }
+        
+        // Get customer
+        Customer customer = customerService.findById(Long.valueOf(application.getCustomerId())).getClient();
+        
+        // Get product
+        Products product = productService.findByCode(application.getProductCode())
+            .orElseThrow(() -> new IllegalStateException("Product not found: " + application.getProductCode()));
+        
+        // Calculate interest
+        loanTransactions transaction = interestCalculator(application);
+        
+        // Create loan account
+        LoanAccount loanAccount = new LoanAccount();
+        loanAccount.setApplicationId(application.getApplicationId());
+        loanAccount.setAmount(Float.valueOf(application.getLoanAmount()));
+        loanAccount.setPayableAmount(Float.valueOf(transaction.getFinalBalance()));
+        loanAccount.setAccountBalance(Float.valueOf(transaction.getFinalBalance()));
+        loanAccount.setCustomerId(customer.getId().toString());
+        loanAccount.setStatus("ACTIVE");
+        loanAccount.setStartDate(LocalDateTime.now());
+        loanAccount.setInstallments(Integer.parseInt(application.getLoanTerm()));
+        
+        // Calculate due date
+        LocalDateTime dueDate = LocalDateTime.now().plusMonths(Integer.parseInt(application.getLoanTerm()));
+        loanAccount.setDueDate(dueDate);
+        
+        // Generate loan reference
+        loanAccount.setLoanref(base64encode(application.getLoanNumber().toString()).toUpperCase());
+        loanAccount.setOtherRef("Application: " + application.getApplicationId());
+        
+        // Save loan account
+        LoanAccount savedAccount = loanAccountRepo.save(loanAccount);
+        
+        // Generate repayment schedule
+        try {
+            LoanAccountModel accountModel = new LoanAccountModel();
+            accountModel.setAmount(savedAccount.getAmount());
+            accountModel.setAccountBalance(savedAccount.getAccountBalance());
+            accountModel.setInstallments(savedAccount.getInstallments());
+            accountModel.setStartDate(savedAccount.getStartDate());
+            accountModel.setInterest(Float.valueOf(application.getLoanInterest()));
+            
+            List<RepaymentSchedules> schedules = getInstallments(accountModel);
+            // Note: You may want to save schedules here
+            
+            log.info("Loan account created successfully: {}", savedAccount.getLoanref());
+            
+            return Map.of(
+                "loanAccountId", savedAccount.getAccountId(),
+                "loanReference", savedAccount.getLoanref(),
+                "amount", savedAccount.getAmount(),
+                "payableAmount", savedAccount.getPayableAmount(),
+                "status", savedAccount.getStatus(),
+                "schedulesGenerated", schedules.size()
+            );
+        } catch (Exception e) {
+            log.error("Error generating repayment schedule", e);
+            return Map.of(
+                "loanAccountId", savedAccount.getAccountId(),
+                "loanReference", savedAccount.getLoanref(),
+                "amount", savedAccount.getAmount(),
+                "payableAmount", savedAccount.getPayableAmount(),
+                "status", savedAccount.getStatus(),
+                "warning", "Schedule generation failed: " + e.getMessage()
+            );
+        }
     }
 }

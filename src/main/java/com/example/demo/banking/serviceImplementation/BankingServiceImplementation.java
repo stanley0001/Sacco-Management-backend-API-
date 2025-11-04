@@ -13,6 +13,7 @@ import com.example.demo.communication.services.InfoBidApiService;
 import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.customerManagement.serviceImplimentations.CustomerService;
 import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.loanManagement.parsistence.entities.Products;
 import com.example.demo.loanManagement.parsistence.entities.SuspensePayments;
 import com.example.demo.loanManagement.services.LoanAccountService;
 import com.example.demo.loanManagement.services.PaymentService;
@@ -330,6 +331,84 @@ public class BankingServiceImplementation implements BankingService {
 
         }
     }
+
+    @Override
+    public void processInitialDepositIfPresent(Customer customer) {
+        Double initialDeposit = customer.getInitialDepositAmount();
+        if (initialDeposit == null || initialDeposit <= 0) {
+            return;
+        }
+
+        Optional<List<BankAccounts>> accountsOptional = this.getBankAccountsByCustomer(customer);
+        if (accountsOptional.isEmpty() || accountsOptional.get().isEmpty()) {
+            log.warn("No bank accounts available for customer {} when processing initial deposit", customer.getPhoneNumber());
+            return;
+        }
+
+        BankAccounts savingsAccount = accountsOptional.get().stream()
+                .filter(acc -> "SAVINGS".equalsIgnoreCase(acc.getAccountType()))
+                .findFirst()
+                .orElse(null);
+
+        if (savingsAccount == null) {
+            log.warn("Savings account missing for customer {} when processing initial deposit", customer.getPhoneNumber());
+            return;
+        }
+
+        String reference = String.format("INIT-%s", customer.getId());
+        Transactions transaction = new Transactions();
+        transaction.setTransactionTime(LocalDateTime.now());
+        transaction.setTransactionType("INITIAL_DEPOSIT");
+        transaction.setAmount(initialDeposit);
+        transaction.setOpeningBalance(savingsAccount.getAccountBalance());
+        transaction.setClosingBalance(savingsAccount.getAccountBalance() + initialDeposit);
+        transaction.setOtherRef(reference);
+        transaction.setBankAccount(savingsAccount);
+
+        this.saveTransaction(transaction);
+        savingsAccount.setAccountBalance(transaction.getClosingBalance());
+        this.saveBankAccount(savingsAccount);
+
+        Payments paymentRecord = new Payments();
+        paymentRecord.setAccountNumber(customer.getPhoneNumber());
+        paymentRecord.setDestinationAccount(savingsAccount.getBankAccount());
+        paymentRecord.setAmount(String.valueOf(initialDeposit));
+        paymentRecord.setStatus("INITIAL_DEPOSIT");
+        paymentRecord.setOtherRef(reference);
+        paymentRecord.setPaymentTime(LocalDateTime.now());
+        paymentRecord.setCustomer(customer);
+        this.savePayment(paymentRecord);
+    }
+
+    @Override
+    public BankAccounts createAccountForProduct(Customer customer, Products product, String customDescription) {
+        if (customer == null || product == null) {
+            throw new IllegalArgumentException("Customer and product are required to create an account");
+        }
+
+        String productCode = product.getCode() != null ? product.getCode() : "GEN";
+        String baseAccountNumber = String.format("%s%s%02d", 30, customer.getDocumentNumber(), product.getId());
+
+        BankAccounts existing = bankAccountRepo.findByBankAccount(baseAccountNumber);
+        if (existing != null) {
+            log.info("Account already exists for customer {} and product {}", customer.getId(), productCode);
+            return existing;
+        }
+
+        BankAccounts account = new BankAccounts();
+        account.setCustomer(customer);
+        account.setBankAccount(baseAccountNumber);
+        account.setAccountType(product.getTransactionType() != null ? product.getTransactionType() : "SAVINGS");
+        account.setAccountDescription(customDescription != null ? customDescription : product.getName());
+        account.setAccountBalance(0.0);
+        account.setCreatedAt(LocalDateTime.now());
+        account.setUpdatedAt(LocalDateTime.now());
+
+        BankAccounts saved = saveBankAccount(account);
+        log.info("Created new bank account {} for customer {} and product {}", saved.getBankAccount(), customer.getId(), productCode);
+        return saved;
+    }
+
     //Transactions
     //save transactions
     public Transactions saveTransaction(Transactions transaction){

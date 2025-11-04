@@ -46,4 +46,7 @@ public class ProductService {
         return productRepo.findByCode(productCode);
     }
 
+    public Optional<Products> findByCode(String productCode) {
+        return Optional.ofNullable(productRepo.findByCode(productCode));
+    }
 }

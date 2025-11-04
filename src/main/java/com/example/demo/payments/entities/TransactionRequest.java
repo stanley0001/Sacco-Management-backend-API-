@@ -23,6 +23,10 @@ public class TransactionRequest {
     @Column(nullable = false)
     private TransactionType type; // DEPOSIT, WITHDRAWAL, LOAN_DISBURSEMENT
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_category")
+    private TransactionCategory transactionCategory; // SAVINGS_DEPOSIT, LOAN_REPAYMENT, TRANSFER
+    
     @Column(nullable = false)
     private Long customerId;
     
@@ -43,6 +47,10 @@ public class TransactionRequest {
     @Column(name = "payment_method")
     private PaymentMethodType paymentMethod; // MPESA, BANK, CASH
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_channel")
+    private PaymentChannel paymentChannel; // MANUAL, MPESA, BANK, INTERNAL
+    
     @Column(name = "reference_number")
     private String referenceNumber; // M-PESA receipt, bank reference, etc.
     
@@ -52,8 +60,17 @@ public class TransactionRequest {
     @Column(name = "loan_id")
     private Long loanId; // For loan-related transactions
     
+    @Column(name = "loan_reference")
+    private String loanReference;
+    
     @Column(name = "savings_account_id")
     private Long savingsAccountId;
+    
+    @Column(name = "source_account_id")
+    private Long sourceAccountId;
+    
+    @Column(name = "target_account_id")
+    private Long targetAccountId;
     
     @Column(columnDefinition = "TEXT")
     private String description;
@@ -88,6 +105,9 @@ public class TransactionRequest {
     @Column(name = "posted_at")
     private LocalDateTime postedAt;
     
+    @Column(name = "provider_config_id")
+    private Long providerConfigId;
+    
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
@@ -118,6 +138,7 @@ public class TransactionRequest {
     
     public enum RequestStatus {
         INITIATED,
+        AWAITING_APPROVAL,
         PROCESSING,
         SUCCESS,
         FAILED,
@@ -131,6 +152,21 @@ public class TransactionRequest {
         CASH,
         CHEQUE,
         AIRTEL_MONEY,
+        INTERNAL_TRANSFER,
         TKASH
+    }
+
+    public enum TransactionCategory {
+        SAVINGS_DEPOSIT,
+        LOAN_REPAYMENT,
+        TRANSFER
+    }
+
+    public enum PaymentChannel {
+        MANUAL,
+        MPESA,
+        AIRTEL_MONEY,
+        BANK,
+        INTERNAL
     }
 }

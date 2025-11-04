@@ -12,7 +12,8 @@ public class Products  {
     private String name;
     @Column(unique = true)
     private String code;
-    private Boolean isActive;
+    @Column(name = "is_active")
+    private Boolean isActive = true; // Default to active
     private Integer term;
     private Integer interest;
     private Integer maxLimit;
@@ -33,6 +34,87 @@ public class Products  {
     
     @Column(name = "early_repayment_penalty")
     private Double earlyRepaymentPenalty = 0.0;
+    
+    // Custom Calculation Strategy (for complex products like Virtucore)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "calculation_strategy")
+    private CalculationStrategy calculationStrategy = CalculationStrategy.STANDARD;
+    
+    // Interest Application Type
+    @Enumerated(EnumType.STRING)
+    @Column(name = "interest_type")
+    private InterestType interestType = InterestType.PER_MONTH; // Default to per month
+    
+    // Loan Eligibility Configuration
+    @Column(name = "eligibility_multiplier")
+    private Double eligibilityMultiplier = 3.0; // Default: 3x savings
+    
+    // Age Restrictions
+    @Column(name = "min_age")
+    private Integer minAge;
+    
+    @Column(name = "max_age")
+    private Integer maxAge;
+    
+    // Member Type Restrictions
+    @Column(name = "require_check_off")
+    private Boolean requireCheckOff = false;
+    
+    // Share Capital Configuration
+    @Column(name = "share_value")
+    private Double shareValue;
+    
+    @Column(name = "min_shares")
+    private Integer minShares;
+    
+    @Column(name = "max_shares")
+    private Integer maxShares;
+    
+    // Fee Configuration
+    @Column(name = "application_fee")
+    private Double applicationFee = 0.0;
+    
+    @Column(name = "processing_fee")
+    private Double processingFee = 0.0;
+    
+    @Column(name = "insurance_fee")
+    private Double insuranceFee = 0.0;
+    
+    @Column(name = "deduct_fees_from_amount")
+    private Boolean deductFeesFromAmount = false; // If false, require actual payment
+    
+    @Column(name = "allow_fee_auto_stk")
+    private Boolean allowFeeAutoStk = false; // Allow STK push for fees
+    
+    // MPESA Integration Settings
+    @Column(name = "mpesa_enabled")
+    private Boolean mpesaEnabled = true;
+    
+    @Column(name = "auto_payment_enabled")
+    private Boolean autoPaymentEnabled = false;
+    
+    @Column(name = "mpesa_paybill")
+    private String mpesaPaybill;
+    
+    // Loan Process Settings
+    @Column(name = "require_application_payment")
+    private Boolean requireApplicationPayment = false; // Require payment before approval
+    
+    @Column(name = "rollover_fee")
+    private Double rolloverFee = 0.0;
+    
+    @Column(name = "allow_interest_waiving")
+    private Boolean allowInterestWaiving = true;
+    
+    @Column(name = "waive_on_early_payment")
+    private Boolean waiveOnEarlyPayment = false; // Auto waive future interest on early payment
+    
+    // Portfolio and Reporting
+    @Column(name = "county")
+    private String county; // For credit manager view per county
+    
+    @Column(name = "branch_code")
+    private String branchCode;
 
     public Products() {
     }
@@ -208,6 +290,190 @@ public class Products  {
 
     public void setEarlyRepaymentPenalty(Double earlyRepaymentPenalty) {
         this.earlyRepaymentPenalty = earlyRepaymentPenalty;
+    }
+
+    public CalculationStrategy getCalculationStrategy() {
+        return calculationStrategy;
+    }
+
+    public void setCalculationStrategy(CalculationStrategy calculationStrategy) {
+        this.calculationStrategy = calculationStrategy;
+    }
+
+    public Double getApplicationFee() {
+        return applicationFee;
+    }
+
+    public void setApplicationFee(Double applicationFee) {
+        this.applicationFee = applicationFee;
+    }
+
+    public Double getProcessingFee() {
+        return processingFee;
+    }
+
+    public void setProcessingFee(Double processingFee) {
+        this.processingFee = processingFee;
+    }
+
+    public Double getInsuranceFee() {
+        return insuranceFee;
+    }
+
+    public void setInsuranceFee(Double insuranceFee) {
+        this.insuranceFee = insuranceFee;
+    }
+
+    public Boolean getDeductFeesFromAmount() {
+        return deductFeesFromAmount;
+    }
+
+    public void setDeductFeesFromAmount(Boolean deductFeesFromAmount) {
+        this.deductFeesFromAmount = deductFeesFromAmount;
+    }
+
+    public Boolean getAllowFeeAutoStk() {
+        return allowFeeAutoStk;
+    }
+
+    public void setAllowFeeAutoStk(Boolean allowFeeAutoStk) {
+        this.allowFeeAutoStk = allowFeeAutoStk;
+    }
+
+    public Boolean getMpesaEnabled() {
+        return mpesaEnabled;
+    }
+
+    public void setMpesaEnabled(Boolean mpesaEnabled) {
+        this.mpesaEnabled = mpesaEnabled;
+    }
+
+    public Boolean getAutoPaymentEnabled() {
+        return autoPaymentEnabled;
+    }
+
+    public void setAutoPaymentEnabled(Boolean autoPaymentEnabled) {
+        this.autoPaymentEnabled = autoPaymentEnabled;
+    }
+
+    public String getMpesaPaybill() {
+        return mpesaPaybill;
+    }
+
+    public void setMpesaPaybill(String mpesaPaybill) {
+        this.mpesaPaybill = mpesaPaybill;
+    }
+
+    public Boolean getRequireApplicationPayment() {
+        return requireApplicationPayment;
+    }
+
+    public void setRequireApplicationPayment(Boolean requireApplicationPayment) {
+        this.requireApplicationPayment = requireApplicationPayment;
+    }
+
+    public Double getRolloverFee() {
+        return rolloverFee;
+    }
+
+    public void setRolloverFee(Double rolloverFee) {
+        this.rolloverFee = rolloverFee;
+    }
+
+    public Boolean getAllowInterestWaiving() {
+        return allowInterestWaiving;
+    }
+
+    public void setAllowInterestWaiving(Boolean allowInterestWaiving) {
+        this.allowInterestWaiving = allowInterestWaiving;
+    }
+
+    public Boolean getWaiveOnEarlyPayment() {
+        return waiveOnEarlyPayment;
+    }
+
+    public void setWaiveOnEarlyPayment(Boolean waiveOnEarlyPayment) {
+        this.waiveOnEarlyPayment = waiveOnEarlyPayment;
+    }
+
+    public String getCounty() {
+        return county;
+    }
+
+    public void setCounty(String county) {
+        this.county = county;
+    }
+
+    public String getBranchCode() {
+        return branchCode;
+    }
+
+    public void setBranchCode(String branchCode) {
+        this.branchCode = branchCode;
+    }
+
+    public InterestType getInterestType() {
+        return interestType;
+    }
+
+    public void setInterestType(InterestType interestType) {
+        this.interestType = interestType;
+    }
+
+    public Double getEligibilityMultiplier() {
+        return eligibilityMultiplier;
+    }
+
+    public void setEligibilityMultiplier(Double eligibilityMultiplier) {
+        this.eligibilityMultiplier = eligibilityMultiplier;
+    }
+
+    public Integer getMinAge() {
+        return minAge;
+    }
+
+    public void setMinAge(Integer minAge) {
+        this.minAge = minAge;
+    }
+
+    public Integer getMaxAge() {
+        return maxAge;
+    }
+
+    public void setMaxAge(Integer maxAge) {
+        this.maxAge = maxAge;
+    }
+
+    public Boolean getRequireCheckOff() {
+        return requireCheckOff;
+    }
+
+    public void setRequireCheckOff(Boolean requireCheckOff) {
+        this.requireCheckOff = requireCheckOff;
+    }
+
+    public Double getShareValue() {
+        return shareValue;
+    }
+
+    public void setShareValue(Double shareValue) {
+        this.shareValue = shareValue;
+    }
+
+    public Integer getMinShares() {
+        return minShares;
+    }
+
+    public void setMinShares(Integer minShares) {
+        this.minShares = minShares;
+    }
+
+    public Integer getMaxShares() {
+        return maxShares;
+    }
+
+    public void setMaxShares(Integer maxShares) {
+        this.maxShares = maxShares;
     }
 
     @Override

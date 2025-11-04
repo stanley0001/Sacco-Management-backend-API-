@@ -140,8 +140,9 @@ public class DashboardStatisticsService {
         BigDecimal cashReserves = BigDecimal.valueOf(1000000); // Mock data - should come from accounting module
         totalAssets = outstandingLoans.add(cashReserves);
         
-        // Liabilities: Member deposits
+        // Liabilities: Member deposits (with null safety)
         BigDecimal memberDeposits = savingsAccountRepo.getTotalSavingsBalance();
+        memberDeposits = memberDeposits != null ? memberDeposits : BigDecimal.ZERO;
         totalLiabilities = memberDeposits;
         
         // Equity = Assets - Liabilities
@@ -155,8 +156,8 @@ public class DashboardStatisticsService {
         BigDecimal operatingExpenses = BigDecimal.valueOf(500000); // Mock data
         BigDecimal netIncome = interestIncome.subtract(operatingExpenses);
         
-        // Financial ratios
-        BigDecimal loanToDepositRatio = memberDeposits.compareTo(BigDecimal.ZERO) > 0
+        // Financial ratios (with null safety)
+        BigDecimal loanToDepositRatio = (memberDeposits != null && memberDeposits.compareTo(BigDecimal.ZERO) > 0)
                 ? outstandingLoans.divide(memberDeposits, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
         

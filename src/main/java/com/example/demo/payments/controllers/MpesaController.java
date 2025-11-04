@@ -20,7 +20,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "M-PESA Integration", description = "M-PESA Daraja API endpoints for payments")
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600, allowCredentials = "true")
 public class MpesaController {
     
     private final MpesaService mpesaService;

@@ -35,7 +35,10 @@ public class ScoreService {
         List<LoanAccount> allAccounts=accountRepo.findByCustomerIdOrderByStartDateDesc(id.toString());
         List<LoanAccount> defaultAccounts=accountRepo.findByStatusAndCustomerId(id.toString(),"DEFAULT");
         Boolean isDefault=Boolean.FALSE;
-        Integer cusAge= LocalDate.now().getYear()-client.getDob().getYear();
+        Integer cusAge = 30; // Default age if DOB is not available
+        if (client.getDob() != null) {
+            cusAge = LocalDate.now().getYear() - client.getDob().getYear();
+        }
       //  Integer maxValue=product.getMaxLimit();
         for (LoanAccount account:allAccounts
 
@@ -58,7 +61,7 @@ public class ScoreService {
         }
         Integer numberOfAccounts=allAccounts.size();
         Integer numberOdDefaults=defaultAccounts.size();
-        Float defaultRate = null;
+        Float defaultRate = 0.0f; // Default to 0% if no defaults
         if (numberOdDefaults>0){
             log.info("number of defaults {}",numberOdDefaults);
             defaultRate=Float.valueOf(numberOdDefaults/numberOfAccounts*100);

@@ -18,10 +18,10 @@ import java.security.Principal;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
-@RestController
-@CrossOrigin
+// @RestController - DISABLED: Consolidated into UserManagementController
+// @CrossOrigin(originPatterns = "*", allowCredentials = "true")
 @Log4j2
-@RequestMapping("/api/users")
+// @RequestMapping("/api/users-legacy")
 public class UserController {
     public UserService userService;
 

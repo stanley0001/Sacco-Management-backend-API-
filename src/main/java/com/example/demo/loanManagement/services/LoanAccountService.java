@@ -313,6 +313,12 @@ public class LoanAccountService {
         // Enrich with customer information
         try {
             ClientInfo clientInfo = customerService.findById(Long.valueOf(account.getCustomerId()));
+            if (clientInfo==null){
+                clientInfo = customerService.findByDocumentNumber(account.getCustomerId());
+            }
+            if (clientInfo==null){
+                clientInfo = customerService.findByExternalId(account.getCustomerId());
+            }
             if (clientInfo != null && clientInfo.getClient() != null) {
                 Customer customer = clientInfo.getClient();
                 dto.setCustomerName(customer.getFirstName() + " " + customer.getLastName());
@@ -322,6 +328,7 @@ public class LoanAccountService {
                 dto.setPhoneNumber("N/A");
             }
         } catch (Exception e) {
+            log.warn("error: {}", e.getMessage());
             log.warn("Could not fetch customer info for customer ID: {}", account.getCustomerId());
             dto.setCustomerName("Unknown");
             dto.setPhoneNumber("N/A");

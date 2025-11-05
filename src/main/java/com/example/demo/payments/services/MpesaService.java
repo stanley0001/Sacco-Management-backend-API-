@@ -1,10 +1,17 @@
 package com.example.demo.payments.services;
 
+import com.example.demo.banking.parsitence.enitities.BankAccounts;
+import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
 import com.example.demo.payments.dto.*;
+import com.example.demo.payments.dto.C2BRegisterUrlRequest;
 import com.example.demo.payments.entities.MpesaConfig;
 import com.example.demo.payments.entities.MpesaTransaction;
 import com.example.demo.payments.entities.TransactionRequest;
 import com.example.demo.payments.repositories.MpesaTransactionRepository;
+import com.example.demo.payments.repositories.TransactionRequestRepository;
+import com.example.demo.savingsManagement.persistence.entities.SavingsAccount;
+import com.example.demo.savingsManagement.services.SavingsAccountService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +26,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +48,12 @@ public class MpesaService {
     private final MpesaAuthService authService;
     private final MpesaConfigService mpesaConfigService;
     private final MpesaTransactionRepository transactionRepository;
+    private final TransactionRequestRepository transactionRequestRepository;
     private final TransactionApprovalService transactionApprovalService;
+    private final SavingsAccountService savingsAccountService;
+    private final BankDepositService bankDepositService;
+    private final LoanAccountRepo loanAccountRepo;
+    private final com.example.demo.loanManagement.services.LoanPaymentService loanPaymentService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final com.example.demo.sms.SmsService smsService;
@@ -48,23 +62,26 @@ public class MpesaService {
      * Initiate STK Push (Lipa Na M-PESA Online)
      */
     public STKPushResponse initiateSTKPush(STKPushRequest request) {
-        log.info("Initiating STK Push for phone: {}, amount: {}", 
+        log.info("Initiating STK Push for phone: {}, amount: {}",
             request.getPhoneNumber(), request.getAmount());
-        
+
+        MpesaTransaction pendingTransaction = null;
+
         try {
             MpesaConfig config = mpesaConfigService.getActiveConfiguration(
                 request.getProviderConfigId(), request.getProviderCode());
 
-            // SMS will be sent only on payment success/failure via callback
-            // smsService.sendStkPushInitiatedSms(request.getPhoneNumber(), request.getAmount());
+            String formattedPhoneNumber = request.getFormattedPhoneNumber();
+            pendingTransaction = createPendingTransactionLog(request, config, formattedPhoneNumber);
+
             // Generate timestamp
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-            
+
             // Generate password
             String password = Base64.getEncoder().encodeToString(
                 (config.getShortcode() + config.getPasskey() + timestamp).getBytes()
             );
-            
+
             // Prepare request body
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("BusinessShortCode", config.getShortcode());
@@ -72,56 +89,83 @@ public class MpesaService {
             requestBody.put("Timestamp", timestamp);
             requestBody.put("TransactionType", "CustomerPayBillOnline");
             requestBody.put("Amount", request.getAmount().intValue());
-            requestBody.put("PartyA", request.getFormattedPhoneNumber());
+            requestBody.put("PartyA", formattedPhoneNumber);
             requestBody.put("PartyB", config.getShortcode());
-            requestBody.put("PhoneNumber", request.getFormattedPhoneNumber());
+            requestBody.put("PhoneNumber", formattedPhoneNumber);
             // Use the specific STK callback URL if available, otherwise fall back to default
             String callbackUrl = config.getStkCallbackUrl() != null ? config.getStkCallbackUrl() : config.getCallbackUrl();
             requestBody.put("CallBackURL", callbackUrl);
             log.info("Using STK callback URL: {}", callbackUrl);
             requestBody.put("AccountReference", request.getAccountReference());
             requestBody.put("TransactionDesc", request.getTransactionDesc());
-            
+
             // Set headers
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + authService.getAccessToken(
                 request.getProviderConfigId(), request.getProviderCode()));
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
+
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            
+
             // Make API call
             String url = config.getApiUrl() + "/mpesa/stkpush/v1/processrequest";
             log.debug("Calling M-PESA API: {}", url);
-            
+
             ResponseEntity<STKPushResponse> response = restTemplate.postForEntity(url, entity, STKPushResponse.class);
-            
-            // Save transaction
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 STKPushResponse stkResponse = response.getBody();
-                saveTransaction(request, stkResponse, config);
+                updateTransactionWithResponse(pendingTransaction, request, stkResponse, formattedPhoneNumber, config);
                 log.info("STK Push initiated successfully: {}", stkResponse.getCheckoutRequestId());
                 return stkResponse;
             }
-            
-            log.error("STK Push failed with status: {}", response.getStatusCode());
-            throw new RuntimeException("STK Push failed: " + response.getStatusCode());
-            
+
+            String errorMessage = "STK Push failed: " + response.getStatusCode();
+            log.error(errorMessage);
+            markTransactionFailed(pendingTransaction, errorMessage, String.valueOf(response.getStatusCodeValue()));
+            throw new RuntimeException(errorMessage);
+
         } catch (Exception e) {
+            if (pendingTransaction != null && pendingTransaction.getStatus() == MpesaTransaction.TransactionStatus.PENDING) {
+                markTransactionFailed(pendingTransaction, e.getMessage(), null);
+            }
             log.error("Error initiating STK Push", e);
             throw new RuntimeException("Failed to initiate STK Push: " + e.getMessage(), e);
+        }
+    }
+
+    private BigDecimal resolveLoanBalance(Long loanId) {
+        try {
+            LoanAccount loanAccount = loanAccountRepo.findById(loanId).orElse(null);
+            if (loanAccount == null || loanAccount.getAccountBalance() == null) {
+                return BigDecimal.ZERO;
+            }
+            return BigDecimal.valueOf(loanAccount.getAccountBalance())
+                .setScale(2, RoundingMode.HALF_UP);
+        } catch (Exception ex) {
+            log.warn("Unable to resolve loan balance for loan {}: {}", loanId, ex.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private SavingsAccount resolveSavingsAccount(Long savingsAccountId) {
+        try {
+            return savingsAccountService.getAccountById(savingsAccountId);
+        } catch (Exception ex) {
+            log.warn("Unable to resolve savings account {}: {}", savingsAccountId, ex.getMessage());
+            return null;
         }
     }
     
     /**
      * Save transaction to database
      */
-    private void saveTransaction(STKPushRequest request, STKPushResponse response, MpesaConfig config) {
+    private MpesaTransaction createPendingTransactionLog(STKPushRequest request, MpesaConfig config, String formattedPhoneNumber) {
         MpesaTransaction transaction = new MpesaTransaction();
-        transaction.setMerchantRequestId(response.getMerchantRequestId());
-        transaction.setCheckoutRequestId(response.getCheckoutRequestId());
+        transaction.setMerchantRequestId("PENDING-" + UUID.randomUUID());
+        transaction.setCheckoutRequestId("PENDING-" + UUID.randomUUID());
         transaction.setTransactionType(MpesaTransaction.TransactionType.STK_PUSH);
-        transaction.setPhoneNumber(request.getFormattedPhoneNumber());
+        transaction.setPhoneNumber(formattedPhoneNumber);
         transaction.setAmount(request.getAmount());
         transaction.setAccountReference(request.getAccountReference());
         transaction.setTransactionDesc(request.getTransactionDesc());
@@ -132,12 +176,92 @@ public class MpesaService {
         transaction.setProviderConfigId(config.getId());
         transaction.setProviderCode(config.getConfigName());
         transaction.setCallbackReceived(false);
+        transaction.setResultDesc("Awaiting STK Push response");
+        transaction.setTransactionRequestId(request.getTransactionRequestId());
+        transaction.setBankAccountId(request.getBankAccountId());
+
+        MpesaTransaction savedTransaction = transactionRepository.save(transaction);
+        log.info("Pending M-PESA transaction saved with ID: {}", savedTransaction.getId());
+        return savedTransaction;
+    }
+
+    private void updateTransactionWithResponse(MpesaTransaction transaction, STKPushRequest request,
+                                               STKPushResponse response, String formattedPhoneNumber,
+                                               MpesaConfig config) {
+        if (response.getMerchantRequestId() != null && !response.getMerchantRequestId().isBlank()) {
+            transaction.setMerchantRequestId(response.getMerchantRequestId());
+        }
+        if (response.getCheckoutRequestId() != null && !response.getCheckoutRequestId().isBlank()) {
+            transaction.setCheckoutRequestId(response.getCheckoutRequestId());
+        }
+
+        transaction.setPhoneNumber(formattedPhoneNumber);
+        transaction.setAmount(request.getAmount());
+        transaction.setAccountReference(request.getAccountReference());
+        transaction.setTransactionDesc(request.getTransactionDesc());
         transaction.setResultCode(response.getResponseCode());
         transaction.setResultDesc(response.getResponseDescription());
+        transaction.setStatus(MpesaTransaction.TransactionStatus.PENDING);
+        transaction.setProviderConfigId(config.getId());
+        transaction.setProviderCode(config.getConfigName());
         transaction.setTransactionRequestId(request.getTransactionRequestId());
-        
+
         transactionRepository.save(transaction);
-        log.info("Transaction saved with ID: {}", transaction.getId());
+        log.info("M-PESA transaction updated with checkout ID: {}", transaction.getCheckoutRequestId());
+    }
+
+    private void markTransactionFailed(MpesaTransaction transaction, String errorMessage, String resultCode) {
+        transaction.setStatus(MpesaTransaction.TransactionStatus.FAILED);
+        if (resultCode != null) {
+            transaction.setResultCode(resultCode);
+        } else {
+            transaction.setResultCode("FAILED");
+        }
+        transaction.setResultDesc(errorMessage != null ? errorMessage : "STK Push initiation failed");
+        transactionRepository.save(transaction);
+        log.info("M-PESA transaction {} marked as FAILED", transaction.getId());
+    }
+
+    private void handleFailedPayment(MpesaTransaction transaction, String failureReason) {
+        String resolvedReason = (failureReason != null && !failureReason.isBlank())
+            ? failureReason
+            : "Payment failed";
+
+        try {
+            transaction.setResultDesc(resolvedReason);
+            transactionRepository.save(transaction);
+
+            if (transaction.getTransactionRequestId() != null) {
+                transactionRequestRepository.findById(transaction.getTransactionRequestId()).ifPresent(request -> {
+                    TransactionRequest.RequestStatus status =
+                        transaction.getStatus() == MpesaTransaction.TransactionStatus.CANCELLED
+                            ? TransactionRequest.RequestStatus.CANCELLED
+                            : TransactionRequest.RequestStatus.FAILED;
+
+                    request.setStatus(status);
+                    request.setFailureReason(resolvedReason);
+                    request.setServiceProviderResponse(resolvedReason);
+                    request.setProcessedAt(LocalDateTime.now());
+                    request.setProcessedBy("MPESA_STATUS_CHECK");
+
+                    transactionRequestRepository.save(request);
+                });
+            }
+
+            if (transaction.getPhoneNumber() != null && transaction.getAmount() != null) {
+                String failureMessage = String.format(
+                    "M-PESA payment of KES %,.2f was not completed. Reason: %s. If funds were deducted, please contact support.",
+                    transaction.getAmount(),
+                    resolvedReason
+                );
+                smsService.sendSms(transaction.getPhoneNumber(), failureMessage);
+            }
+
+            log.info("Handled failed MPESA transaction {} with status {}", transaction.getId(), transaction.getStatus());
+
+        } catch (Exception ex) {
+            log.error("Error while handling failed MPESA transaction {}", transaction.getId(), ex);
+        }
     }
     
     /**
@@ -202,20 +326,46 @@ public class MpesaService {
                 .orElse(null);
             
             if (transaction != null) {
-                // Update local transaction status based on Safaricom response
+                boolean alreadyProcessed = Boolean.TRUE.equals(transaction.getCallbackReceived());
+                transaction.setResultCode(resultCode);
+                transaction.setResultDesc(resultDesc);
+
                 if ("0".equals(resultCode)) {
                     transaction.setStatus(MpesaTransaction.TransactionStatus.SUCCESS);
                     if (stkQueryResponse.containsKey("MpesaReceiptNumber")) {
                         transaction.setMpesaReceiptNumber((String) stkQueryResponse.get("MpesaReceiptNumber"));
                     }
+                    transaction.setCallbackReceived(true);
+                    transactionRepository.save(transaction);
+
+                    if (!alreadyProcessed) {
+                        log.debug("Processing successful MPESA transaction {} via status query", transaction.getId());
+                        processSuccessfulPayment(transaction);
+                    }
+
                 } else if ("1032".equals(resultCode)) {
                     transaction.setStatus(MpesaTransaction.TransactionStatus.CANCELLED);
+                    transaction.setCallbackReceived(true);
+                    transactionRepository.save(transaction);
+
+                    if (!alreadyProcessed) {
+                        log.debug("Handling cancelled MPESA transaction {} via status query", transaction.getId());
+                        handleFailedPayment(transaction, resultDesc != null ? resultDesc : "Payment cancelled by user");
+                    }
+
                 } else if (!"1037".equals(resultCode)) { // Not timeout, so it's failed
                     transaction.setStatus(MpesaTransaction.TransactionStatus.FAILED);
+                    transaction.setCallbackReceived(true);
+                    transactionRepository.save(transaction);
+
+                    if (!alreadyProcessed) {
+                        log.debug("Handling failed MPESA transaction {} via status query", transaction.getId());
+                        handleFailedPayment(transaction, resultDesc != null ? resultDesc : "Payment failed");
+                    }
+
+                } else {
+                    transactionRepository.save(transaction);
                 }
-                transaction.setResultCode(resultCode);
-                transaction.setResultDesc(resultDesc);
-                transactionRepository.save(transaction);
             }
             
             return MpesaDepositStatusResponse.builder()
@@ -395,74 +545,130 @@ public class MpesaService {
      */
     private void processSuccessfulPayment(MpesaTransaction transaction) {
         try {
-            TransactionRequest postedRequest = transactionApprovalService.autoPostSuccessfulMpesa(transaction);
+            // Track if payment was already processed to avoid double-processing
+            boolean depositProcessed = false;
 
+            // Handle loan repayment
             if (transaction.getLoanId() != null) {
-                log.info("Loan repayment recorded for loan ID: {} via MPESA checkout {}",
-                    transaction.getLoanId(), transaction.getCheckoutRequestId());
+                // Actually process the loan repayment (not just read the balance!)
+                com.example.demo.loanManagement.parsistence.entities.loanTransactions loanTxn = 
+                    loanPaymentService.processLoanPayment(
+                        transaction.getLoanId(),
+                        transaction.getAmount(),
+                        "MPESA",
+                        transaction.getMpesaReceiptNumber()
+                    );
                 
-                // Send loan payment confirmation SMS
+                // Get updated balance after payment
+                BigDecimal remainingBalance = resolveLoanBalance(transaction.getLoanId());
+
+                log.info("Loan repayment recorded for loan ID: {} via MPESA checkout {}. Remaining balance: {}",
+                    transaction.getLoanId(), transaction.getCheckoutRequestId(), remainingBalance);
+
                 smsService.sendPaymentConfirmationSms(
                     transaction.getPhoneNumber(),
                     transaction.getAmount(),
                     transaction.getMpesaReceiptNumber(),
-                    BigDecimal.ZERO // Will be updated with actual remaining balance later
+                    remainingBalance
                 );
+
+                log.info("M-PESA loan repayment processed successfully: Amount={}, Receipt={}, Loan ID={}, BalanceAfter={}",
+                    transaction.getAmount(), transaction.getMpesaReceiptNumber(), transaction.getLoanId(), remainingBalance);
                 
-                // Log successful loan repayment
-                log.info("M-PESA loan repayment processed successfully: Amount={}, Receipt={}, Loan ID={}", 
-                    transaction.getAmount(), transaction.getMpesaReceiptNumber(), transaction.getLoanId());
+                depositProcessed = true;
             }
 
-            if (transaction.getSavingsAccountId() != null) {
-                log.info("Savings deposit recorded for account ID: {} via MPESA checkout {}",
-                    transaction.getSavingsAccountId(), transaction.getCheckoutRequestId());
-                
-                // Send deposit confirmation SMS
+            // Handle bank account deposits (ALPHA, SHARES, SAVINGS from banking module)
+            else if (transaction.getBankAccountId() != null || (transaction.getCustomerId() != null && transaction.getLoanId() == null && transaction.getSavingsAccountId() == null)) {
+                try {
+                    com.example.demo.banking.parsitence.enitities.Transactions bankTxn = 
+                        bankDepositService.processMpesaDeposit(transaction);
+                    
+                    log.info("Bank deposit processed via MPESA checkout {}",
+                        transaction.getCheckoutRequestId());
+
+                    // Get updated balance from the transaction
+                    BigDecimal newBalance = BigDecimal.valueOf(bankTxn.getClosingBalance());
+                    String accountNumber = bankTxn.getBankAccount().getBankAccount();
+
+                    smsService.sendDepositConfirmationSms(
+                        transaction.getPhoneNumber(),
+                        transaction.getAmount(),
+                        accountNumber,
+                        newBalance
+                    );
+
+                    log.info("M-PESA bank deposit processed successfully: Amount={}, Receipt={}, Account={}, BalanceAfter={}",
+                        transaction.getAmount(), transaction.getMpesaReceiptNumber(), accountNumber, newBalance);
+                    
+                    depositProcessed = true;
+                } catch (Exception e) {
+                    log.error("Error processing bank deposit: {}. Suspense payment recorded.", e.getMessage());
+                    // Suspense payment already recorded by BankDepositService
+                }
+            }
+            // Handle new savings account deposits (if using SavingsAccount module)
+            else if (transaction.getSavingsAccountId() != null) {
+                SavingsAccount savingsAccount = resolveSavingsAccount(transaction.getSavingsAccountId());
+                BigDecimal newBalance = savingsAccount != null ? savingsAccount.getBalance() : BigDecimal.ZERO;
+                String accountNumber = savingsAccount != null ? savingsAccount.getAccountNumber() : transaction.getSavingsAccountId().toString();
+
+                log.info("Savings deposit recorded for account {} via MPESA checkout {}. New balance: {}",
+                    accountNumber, transaction.getCheckoutRequestId(), newBalance);
+
                 smsService.sendDepositConfirmationSms(
                     transaction.getPhoneNumber(),
                     transaction.getAmount(),
-                    transaction.getSavingsAccountId().toString(),
-                    BigDecimal.ZERO // Will be updated with actual account balance later
+                    accountNumber,
+                    newBalance
                 );
-                
-                // Log successful deposit
-                log.info("M-PESA deposit processed successfully: Amount={}, Receipt={}, Account ID={}", 
-                    transaction.getAmount(), transaction.getMpesaReceiptNumber(), transaction.getSavingsAccountId());
-            }
 
-            // Send general successful payment notification if neither loan nor savings specified
-            if (transaction.getLoanId() == null && transaction.getSavingsAccountId() == null) {
+                log.info("M-PESA deposit processed successfully: Amount={}, Receipt={}, Account={}, BalanceAfter={}",
+                    transaction.getAmount(), transaction.getMpesaReceiptNumber(), accountNumber, newBalance);
+                
+                depositProcessed = true;
+            }
+            
+            // Auto-post to transaction request ONLY if payment hasn't been processed by specific handlers
+            // This prevents double-processing of deposits
+            TransactionRequest postedRequest = null;
+            if (transaction.getTransactionRequestId() != null && !depositProcessed) {
+                log.info("Auto-posting M-PESA transaction to transaction request: {}", transaction.getTransactionRequestId());
+                postedRequest = transactionApprovalService.autoPostSuccessfulMpesa(transaction);
+            }
+            
+            // Send general successful payment notification if no specific account and not already processed
+            if (transaction.getLoanId() == null && !depositProcessed) {
                 smsService.sendPaymentConfirmationSms(
                     transaction.getPhoneNumber(),
                     transaction.getAmount(),
                     transaction.getMpesaReceiptNumber(),
                     BigDecimal.ZERO
                 );
-                
-                log.info("M-PESA general payment processed successfully: Amount={}, Receipt={}", 
+
+                log.info("M-PESA general payment processed successfully: Amount={}, Receipt={}",
                     transaction.getAmount(), transaction.getMpesaReceiptNumber());
             }
 
             if (postedRequest != null) {
                 log.info("Transaction request {} updated to status {} after MPESA success",
                     postedRequest.getId(), postedRequest.getStatus());
-                    
+
                 // Update transaction request with final status
                 postedRequest.setServiceProviderResponse("Payment completed successfully via M-PESA");
             }
         } catch (Exception ex) {
             log.error("Error auto-posting successful MPESA transaction {}", transaction.getId(), ex);
-            
+
             // Send error notification SMS
             try {
-                smsService.sendSms(transaction.getPhoneNumber(), 
-                    String.format("Payment processing error. Amount: KES %,.2f. Please contact support if funds were deducted. Receipt: %s", 
+                smsService.sendSms(transaction.getPhoneNumber(),
+                    String.format("Payment processing error. Amount: KES %,.2f. Please contact support if funds were deducted. Receipt: %s",
                         transaction.getAmount(), transaction.getMpesaReceiptNumber()));
             } catch (Exception smsEx) {
                 log.error("Failed to send error notification SMS", smsEx);
             }
-            
+
             throw new RuntimeException("Failed to post MPESA payment: " + ex.getMessage(), ex);
         }
     }
@@ -606,5 +812,128 @@ public class MpesaService {
         config.setValidationUrl(baseUrl + "/api/mpesa/callback/validation");
         config.setConfirmationUrl(baseUrl + "/api/mpesa/callback/confirmation");
         config.setStatusCallbackUrl(baseUrl + "/api/mpesa/callback/transaction-status");
+    }
+    
+    /**
+     * Register C2B URLs with Safaricom Daraja API
+     * This registers the ValidationURL and ConfirmationURL for C2B transactions
+     * 
+     * @param configId M-PESA configuration ID
+     * @param providerCode Provider code/config name
+     * @param shortcode Paybill/Till number
+     * @param validationUrl URL for validation requests
+     * @param confirmationUrl URL for confirmation callbacks
+     * @return true if registration successful, false otherwise
+     */
+    public boolean registerC2BUrls(Long configId, String providerCode, String shortcode, 
+                                   String validationUrl, String confirmationUrl) {
+        try {
+            log.info("Registering C2B URLs with Daraja API for shortcode: {}", shortcode);
+            log.info("ValidationURL: {}", validationUrl);
+            log.info("ConfirmationURL: {}", confirmationUrl);
+            
+            // Get M-PESA configuration (same pattern as STK push, B2C)
+            MpesaConfig config = mpesaConfigService.getActiveConfiguration(configId, providerCode);
+            
+            // Get OAuth Bearer token (same as STK push)
+            String accessToken = authService.getAccessToken(configId, providerCode);
+            
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                log.error("❌ Failed to obtain access token for C2B URL registration");
+                return false;
+            }
+            
+            log.info("Using Bearer token for C2B registration: {}***", accessToken.substring(0, Math.min(20, accessToken.length())));
+            
+            // Prepare request body using DTO with @JsonProperty annotations
+            // This ensures exact field names (ShortCode, ResponseType, etc.) are sent to M-PESA
+            C2BRegisterUrlRequest requestBody = C2BRegisterUrlRequest.builder()
+                .shortCode(shortcode)
+                .responseType("Completed")
+                .confirmationURL(confirmationUrl)
+                .validationURL(validationUrl)
+                .build();
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + accessToken);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            // Build request entity
+            HttpEntity<C2BRegisterUrlRequest> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            String apiBaseUrl = config.getApiUrl();
+            String registerUrlEndpoint = apiBaseUrl + "/mpesa/c2b/v1/registerurl";
+            
+            log.info("Calling Daraja C2B Register URL: {}", registerUrlEndpoint);
+            log.info("Request: {}", requestBody);
+            log.debug("Authorization: Bearer {}***", accessToken.substring(0, Math.min(30, accessToken.length())));
+            
+            // Make API call using injected restTemplate (same pattern as STK push, B2C)
+            ResponseEntity<Map> response = restTemplate.exchange(
+                registerUrlEndpoint,
+                HttpMethod.POST,
+                requestEntity,
+                Map.class
+            );
+            
+            // Log response
+            log.info("C2B URL Registration Response Status: {}", response.getStatusCode());
+            log.info("C2B URL Registration Response Body: {}", response.getBody());
+            
+            // Check response
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+                
+                // Daraja API returns different response formats
+                // Success indicators: ResponseDescription or ResponseCode
+                String responseDescription = (String) responseBody.get("ResponseDescription");
+                String responseCode = (String) responseBody.get("ResponseCode");
+                
+                boolean success = false;
+                if (responseCode != null && "0".equals(responseCode)) {
+                    // Success response code
+                    success = true;
+                } else if (responseDescription != null && 
+                          (responseDescription.toLowerCase().contains("success") ||
+                           responseDescription.toLowerCase().contains("registered"))) {
+                    // Success description
+                    success = true;
+                }
+                
+                if (success) {
+                    log.info("✅ C2B URLs registered successfully with M-PESA");
+                    log.info("Response: {}", responseDescription != null ? responseDescription : responseBody);
+                    
+                    // Update configuration with registered URLs
+                    config.setValidationUrl(validationUrl);
+                    config.setConfirmationUrl(confirmationUrl);
+                    config.setPaybillCallbackUrl(confirmationUrl);
+                    // Configuration will be saved automatically after this method returns
+                    log.info("Configuration updated with registered URLs");
+                    
+                    return true;
+                } else {
+                    log.error("❌ C2B URL registration failed. Response: {}", responseBody);
+                    return false;
+                }
+            } else {
+                log.error("❌ C2B URL registration failed with status: {}", response.getStatusCode());
+                return false;
+            }
+            
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("❌ M-PESA API Client Error during C2B registration: {} - {}", 
+                e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("Error details: {}", e.getMessage());
+            return false;
+        } catch (org.springframework.web.client.HttpServerErrorException e) {
+            log.error("❌ M-PESA API Server Error during C2B registration: {} - {}", 
+                e.getStatusCode(), e.getResponseBodyAsString());
+            return false;
+        } catch (Exception e) {
+            log.error("❌ Unexpected error during C2B URL registration", e);
+            log.error("Error message: {}", e.getMessage());
+            return false;
+        }
     }
 }

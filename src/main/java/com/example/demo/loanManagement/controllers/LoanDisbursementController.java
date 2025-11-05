@@ -1,5 +1,6 @@
 package com.example.demo.loanManagement.controllers;
 
+import com.example.demo.loanManagement.dto.LoanDisbursementRequest;
 import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
 import com.example.demo.loanManagement.parsistence.entities.LoanApplication;
 import com.example.demo.loanManagement.services.LoanDisbursementService;
@@ -12,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -155,6 +157,98 @@ public class LoanDisbursementController {
             log.error("Error fetching loan account details for {}", loanAccountId, e);
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * Enhanced disbursement with multiple disbursement methods support
+     * Supports: SACCO_ACCOUNT, MPESA_B2C, BANK_TRANSFER, CASH_MANUAL, CHEQUE
+     */
+    @PostMapping("/disburse-enhanced")
+    @Operation(summary = "Disburse loan with multiple disbursement method support")
+    @PreAuthorize("hasAnyAuthority('LOAN_DISBURSE', 'ADMIN_ACCESS')")
+    public ResponseEntity<Map<String, Object>> disburseWithMethod(
+        @RequestBody LoanDisbursementRequest request,
+        Authentication authentication
+    ) {
+        try {
+            // Validate request
+            if (!request.isValid()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Invalid disbursement request. Missing required fields for " + request.getDisbursementMethod()
+                ));
+            }
+            
+            String disbursedBy = authentication != null ? authentication.getName() : "system";
+            request.setDisbursedBy(disbursedBy);
+            
+            // Generate reference if not provided
+            if (request.getDisbursementReference() == null || request.getDisbursementReference().isEmpty()) {
+                request.setDisbursementReference("DISB_" + System.currentTimeMillis());
+            }
+            
+            log.info("Processing enhanced disbursement for application {} using method {}", 
+                request.getApplicationId(), request.getDisbursementMethod());
+            
+            // Call enhanced disbursement service method
+            String method = mapDisbursementMethod(request.getDisbursementMethod());
+            String destination = request.getDestinationString();
+            
+            LoanAccount loanAccount = disbursementService.disburseLoan(
+                request.getApplicationId(), 
+                disbursedBy, 
+                request.getDisbursementReference(),
+                method,
+                destination
+            );
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Loan disbursed successfully via " + request.getDisbursementMethod().getDescription());
+            response.put("loanAccountId", loanAccount.getId());
+            response.put("loanReference", loanAccount.getLoanReference());
+            response.put("principalAmount", loanAccount.getPrincipalAmount());
+            response.put("totalAmount", loanAccount.getTotalAmount());
+            response.put("disbursementMethod", request.getDisbursementMethod());
+            response.put("destination", destination);
+            response.put("disbursementDate", loanAccount.getDisbursementDate());
+            response.put("term", loanAccount.getTerm());
+            response.put("hasPaymentSchedules", true); // Always true now
+            
+            log.info("Loan disbursed successfully. Account: {}, Amount: {}, Method: {}", 
+                loanAccount.getLoanReference(), loanAccount.getPrincipalAmount(), request.getDisbursementMethod());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalStateException e) {
+            log.error("Validation error during disbursement for application {}: {}", 
+                request.getApplicationId(), e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage(),
+                "applicationId", request.getApplicationId()
+            ));
+        } catch (Exception e) {
+            log.error("Error disbursing loan for application {}", request.getApplicationId(), e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "Failed to disburse loan: " + e.getMessage(),
+                "applicationId", request.getApplicationId()
+            ));
+        }
+    }
+    
+    /**
+     * Map DTO disbursement method to service method string
+     */
+    private String mapDisbursementMethod(LoanDisbursementRequest.DisbursementMethod method) {
+        return switch (method) {
+            case MPESA_B2C -> "MPESA";
+            case BANK_TRANSFER -> "BANK_ACCOUNT";
+            case CASH_MANUAL -> "CASH";
+            case CHEQUE -> "CHEQUE";
+            case SACCO_ACCOUNT -> "SACCO_ACCOUNT";
+        };
     }
 
     /**

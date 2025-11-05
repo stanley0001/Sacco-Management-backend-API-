@@ -1,5 +1,6 @@
 package com.example.demo.savingsManagement.services;
 
+import com.example.demo.banking.parsitence.enitities.BankAccounts;
 import com.example.demo.savingsManagement.persistence.entities.SavingsAccount;
 import com.example.demo.savingsManagement.persistence.entities.SavingsProduct;
 import com.example.demo.savingsManagement.persistence.entities.SavingsTransaction;

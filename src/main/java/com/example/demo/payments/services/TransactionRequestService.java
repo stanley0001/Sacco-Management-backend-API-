@@ -380,10 +380,69 @@ public class TransactionRequestService {
         request.setProcessedAt(LocalDateTime.now());
         
         if (newStatus == TransactionRequest.RequestStatus.FAILED && failureReason != null) {
-            request.setFailureReason(failureReason);
+            // Extract key error info and truncate safely
+            String safeFailureReason = extractKeyErrorInfo(failureReason);
+            request.setFailureReason(safeFailureReason);
         }
         
         return transactionRequestRepository.save(request);
+    }
+    
+    /**
+     * Extract key error information and truncate to fit database constraints
+     * Extracts: error code, error message, and HTTP status if present
+     * Max length: 900 characters (safe buffer from 1000)
+     */
+    private String extractKeyErrorInfo(String fullError) {
+        if (fullError == null) {
+            return null;
+        }
+        
+        // Max length for database column (with safety buffer)
+        final int MAX_LENGTH = 900;
+        
+        // If already short enough, return as-is
+        if (fullError.length() <= MAX_LENGTH) {
+            return fullError;
+        }
+        
+        // Extract key information using regex patterns
+        StringBuilder keyInfo = new StringBuilder();
+        
+        // Extract error code (e.g., "errorCode": "404.001.03")
+        java.util.regex.Pattern errorCodePattern = java.util.regex.Pattern.compile("\"errorCode\"\\s*:\\s*\"([^\"]+)\"");
+        java.util.regex.Matcher errorCodeMatcher = errorCodePattern.matcher(fullError);
+        if (errorCodeMatcher.find()) {
+            keyInfo.append("Code: ").append(errorCodeMatcher.group(1)).append(" | ");
+        }
+        
+        // Extract error message (e.g., "errorMessage": "Invalid Access Token")
+        java.util.regex.Pattern errorMessagePattern = java.util.regex.Pattern.compile("\"errorMessage\"\\s*:\\s*\"([^\"]+)\"");
+        java.util.regex.Matcher errorMessageMatcher = errorMessagePattern.matcher(fullError);
+        if (errorMessageMatcher.find()) {
+            keyInfo.append("Message: ").append(errorMessageMatcher.group(1)).append(" | ");
+        }
+        
+        // Extract HTTP status (e.g., "404 Not Found")
+        java.util.regex.Pattern httpStatusPattern = java.util.regex.Pattern.compile("(\\d{3}\\s+[A-Za-z\\s]+):");
+        java.util.regex.Matcher httpStatusMatcher = httpStatusPattern.matcher(fullError);
+        if (httpStatusMatcher.find()) {
+            keyInfo.append("Status: ").append(httpStatusMatcher.group(1)).append(" | ");
+        }
+        
+        // If we extracted key info, use it
+        if (keyInfo.length() > 0) {
+            // Add truncated original for context
+            int remainingSpace = MAX_LENGTH - keyInfo.length() - 20; // Buffer for "... [truncated]"
+            if (remainingSpace > 50 && fullError.length() > keyInfo.length()) {
+                String contextSnippet = fullError.substring(0, Math.min(remainingSpace, fullError.length()));
+                keyInfo.append("Full: ").append(contextSnippet).append("... [truncated]");
+            }
+            return keyInfo.toString();
+        }
+        
+        // Fallback: Simple truncation with ellipsis
+        return fullError.substring(0, MAX_LENGTH - 15) + "... [truncated]";
     }
     
     /**

@@ -78,6 +78,9 @@ public class MpesaTransaction {
     
     @Column(name = "savings_account_id")
     private Long savingsAccountId;
+
+    @Column(name = "bank_account_id")
+    private Long bankAccountId;
     
     @Column(name = "transaction_request_id")
     private Long transactionRequestId;

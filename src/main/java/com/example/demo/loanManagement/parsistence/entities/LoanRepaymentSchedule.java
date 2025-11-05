@@ -31,7 +31,9 @@ public class LoanRepaymentSchedule {
     
     @Column(name = "principal_amount", precision = 15, scale = 2, columnDefinition = "NUMERIC(15,2) DEFAULT 0")
     private BigDecimal principalAmount = BigDecimal.ZERO;
-    
+    @Column(name = "amount", precision = 15, scale = 2, columnDefinition = "NUMERIC(15,2) DEFAULT 0")
+    private BigDecimal amount = BigDecimal.ZERO;
+
     @Column(name = "interest_amount", precision = 15, scale = 2, columnDefinition = "NUMERIC(15,2) DEFAULT 0")
     private BigDecimal interestAmount = BigDecimal.ZERO;
     

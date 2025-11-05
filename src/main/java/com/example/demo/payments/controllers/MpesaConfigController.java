@@ -355,15 +355,18 @@ public class MpesaConfigController {
             }
 
             // Auto-generate URLs directly on DTO
+            // NOTE: C2B URLs use "auto-pay" instead of "mpesa" to comply with Safaricom Daraja restrictions
+            // Daraja blocks URLs containing: mpesa, safaricom, sql, exec, cmd, query
             baseUrl = baseUrl.replaceAll("/$", "");
-            configDto.setStkCallbackUrl(baseUrl + "/api/mpesa/callback/stk-push");
-            configDto.setPaybillCallbackUrl(baseUrl + "/api/mpesa/callback/paybill");
-            configDto.setB2cCallbackUrl(baseUrl + "/api/mpesa/callback/b2c");
-            configDto.setValidationUrl(baseUrl + "/api/mpesa/callback/validation");
-            configDto.setConfirmationUrl(baseUrl + "/api/mpesa/callback/confirmation");
-            configDto.setStatusCallbackUrl(baseUrl + "/api/mpesa/callback/transaction-status");
+            configDto.setStkCallbackUrl(baseUrl + "/api/mpesa/callback/stk-push"); // STK push uses existing endpoint
+            configDto.setPaybillCallbackUrl(baseUrl + "/api/auto-pay/callback/paybill"); // C2B uses auto-pay
+            configDto.setB2cCallbackUrl(baseUrl + "/api/mpesa/callback/b2c"); // B2C uses existing endpoint
+            configDto.setValidationUrl(baseUrl + "/api/auto-pay/callback/validate"); // C2B validation uses auto-pay
+            configDto.setConfirmationUrl(baseUrl + "/api/auto-pay/callback/confirm"); // C2B confirmation uses auto-pay
+            configDto.setStatusCallbackUrl(baseUrl + "/api/mpesa/callback/transaction-status"); // Status uses existing endpoint
             
-            log.info("Generated URLs - STK: {}, Paybill: {}", configDto.getStkCallbackUrl(), configDto.getPaybillCallbackUrl());
+            log.info("Generated URLs - STK: {}, C2B Validation: {}, C2B Confirmation: {}", 
+                configDto.getStkCallbackUrl(), configDto.getValidationUrl(), configDto.getConfirmationUrl());
             
             // Update configuration
             var updatedConfig = configService.updateConfiguration(id, configDto, "SYSTEM");
@@ -410,21 +413,43 @@ public class MpesaConfigController {
                 return ResponseEntity.notFound().build();
             }
 
-            // Here you would typically call Safaricom's C2B URL registration API
-            // For now, we'll just update the configuration and return success
+            // Call actual Daraja API to register C2B URLs
             log.info("Registering paybill URL {} for shortcode {}", paybillUrl, configDto.getShortcode());
             
-            // TODO: Implement actual Daraja API call for URL registration
-            // This would involve calling:
-            // POST https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl
-            // with ValidationURL and ConfirmationURL
-            
-            return ResponseEntity.ok(java.util.Map.of(
-                "success", true,
-                "message", "Paybill URL registration initiated successfully",
-                "registeredUrl", paybillUrl,
-                "shortcode", configDto.getShortcode()
-            ));
+            try {
+                // Call M-PESA service to register C2B URLs
+                boolean registered = mpesaService.registerC2BUrls(
+                    configDto.getId(),
+                    configDto.getConfigName(), // Provider code
+                    configDto.getShortcode(),
+                    paybillUrl,
+                    paybillUrl // Using same URL for validation and confirmation
+                );
+                
+                if (registered) {
+                    return ResponseEntity.ok(java.util.Map.of(
+                        "success", true,
+                        "message", "Paybill URL registered successfully with M-PESA",
+                        "registeredUrl", paybillUrl,
+                        "shortcode", configDto.getShortcode(),
+                        "validationUrl", paybillUrl,
+                        "confirmationUrl", paybillUrl
+                    ));
+                } else {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(java.util.Map.of(
+                            "success", false,
+                            "message", "Failed to register URL with M-PESA. Check logs for details."
+                        ));
+                }
+            } catch (Exception apiError) {
+                log.error("Daraja API error during C2B registration: {}", apiError.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of(
+                        "success", false,
+                        "message", "M-PESA API error: " + apiError.getMessage()
+                    ));
+            }
 
         } catch (Exception e) {
             log.error("Error registering paybill URL for config {}: {}", id, e.getMessage());

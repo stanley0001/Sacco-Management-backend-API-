@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ public class LoanApplicationApprovalService {
     private final ApplicationRepo applicationRepo;
     private final CustomerService customerService;
     private final CommunicationService communicationService;
+    private final LoanAccountingService loanAccountingService;
 
     @Transactional
     public LoanApplication approveApplication(Long applicationId, String approvedBy, String comments) {

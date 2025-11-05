@@ -127,7 +127,12 @@ public class LoanAccount {
     }
 
     public Float getAmountPaid() {
-        return this.payableAmount-this.accountBalance;
+//        return this.payableAmount-this.accountBalance;
+        return this.payableAmount-getAccountBalance();
+    }
+
+    public Float getAccountBalance() {
+        return accountBalance!=null?accountBalance:0;
     }
 
     @Override

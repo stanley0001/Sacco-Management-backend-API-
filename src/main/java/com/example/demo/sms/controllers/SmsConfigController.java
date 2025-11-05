@@ -107,32 +107,16 @@ public class SmsConfigController {
 
     @GetMapping("/history")
     @Operation(summary = "Get SMS history")
-    @PreAuthorize("hasAnyAuthority('canViewBps', 'ADMIN_ACCESS')")
+    @PreAuthorize("hasAnyAuthority('canViewCommunication', 'canViewBps', 'ADMIN_ACCESS')")
     public ResponseEntity<?> getSmsHistory(
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "50") int size
     ) {
         try {
-            // For now return mock data - in production this would come from a database table
-            List<Map<String, Object>> history = List.of(
-                Map.of(
-                    "id", 1,
-                    "recipient", "+254712345678",
-                    "message", "Welcome to HelaSuite SACCO! Your account is now active.",
-                    "status", "SENT",
-                    "sentDate", java.time.LocalDateTime.now().toString(),
-                    "cost", 2.50
-                ),
-                Map.of(
-                    "id", 2,
-                    "recipient", "+254798765432",
-                    "message", "Your loan application has been approved.",
-                    "status", "SENT",
-                    "sentDate", java.time.LocalDateTime.now().minusHours(1).toString(),
-                    "cost", 2.50
-                )
-            );
+            // Get real SMS history from the service
+            List<Map<String, Object>> history = smsService.getSmsHistory(page, size);
             
+            log.info("Retrieved {} SMS history records (page: {}, size: {})", history.size(), page, size);
             return ResponseEntity.ok(history);
         } catch (Exception e) {
             log.error("Error fetching SMS history", e);

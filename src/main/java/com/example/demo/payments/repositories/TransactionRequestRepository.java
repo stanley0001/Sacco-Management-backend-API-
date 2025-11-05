@@ -72,6 +72,15 @@ public interface TransactionRequestRepository extends JpaRepository<TransactionR
     // Find by M-PESA transaction ID
     TransactionRequest findByMpesaTransactionId(Long mpesaTransactionId);
     
+    // Find by status ordered by initiated date
+    List<TransactionRequest> findByStatusOrderByInitiatedAtDesc(TransactionRequest.RequestStatus status);
+    
+    // Find by customer and status ordered by initiated date
+    List<TransactionRequest> findByCustomerIdAndStatusOrderByInitiatedAtDesc(
+        Long customerId, 
+        TransactionRequest.RequestStatus status
+    );
+    
     // Statistics queries
     @Query("SELECT COUNT(t) FROM TransactionRequest t WHERE t.type = :type AND t.status = :status")
     Long countByTypeAndStatus(

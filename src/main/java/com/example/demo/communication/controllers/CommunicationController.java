@@ -6,17 +6,21 @@ import com.example.demo.communication.parsitence.models.Email;
 import com.example.demo.communication.parsitence.models.messageTemplates;
 import com.example.demo.communication.parsitence.models.ContactListUpload;
 import com.example.demo.communication.services.CommunicationService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/communication")
+@CrossOrigin(originPatterns = "*", maxAge = 3600, allowCredentials = "true")
+@Slf4j
 public class CommunicationController {
-@Autowired
+    @Autowired
     CommunicationService communicationService;
     @PostMapping("/createTemplate")
     public ResponseEntity<messageTemplates> createTemplate(@RequestBody messageTemplates template){
@@ -74,5 +78,21 @@ public class CommunicationController {
         // you'd filter by customer ID
         List<Email> communications = communicationService.getOutbox();
         return new ResponseEntity<>(communications, HttpStatus.OK);
+    }
+    
+    /**
+     * Get all communication outbox (emails/SMS sent)
+     */
+    @GetMapping("/Outbox")
+    @PreAuthorize("hasAnyAuthority('canViewCommunication', 'ADMIN_ACCESS')")
+    public ResponseEntity<List<Email>> getOutbox(){
+        try {
+            List<Email> communications = communicationService.getOutbox();
+            log.info("Retrieved {} communication records from outbox", communications.size());
+            return new ResponseEntity<>(communications, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error fetching outbox communications", e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

@@ -40,16 +40,16 @@ public class LoanPaymentService {
         LoanAccount loan = loanAccountRepo.findById(loanId)
             .orElseThrow(() -> new RuntimeException("Loan not found: " + loanId));
         
-        // Validate loan status
-        if (!"ACTIVE".equals(loan.getStatus()) && !"OVERDUE".equals(loan.getStatus())) {
-            throw new RuntimeException("Cannot process payment. Loan status: " + loan.getStatus());
-        }
-        
         // Get current balance
         Float currentBalance = loan.getAccountBalance();
         if (currentBalance == null || currentBalance <= 0) {
+            log.warn("Loan {} has no outstanding balance. Current balance: {}", loanId, currentBalance);
             throw new RuntimeException("Loan already paid off or has invalid balance");
         }
+        
+        // Allow payment on any loan with a balance, regardless of status
+        log.info("Processing payment for loan {} with status: {} and balance: {}", 
+                loanId, loan.getStatus(), currentBalance);
         
         // Calculate new balance
         Float paymentAmountFloat = paymentAmount.floatValue();
@@ -67,6 +67,11 @@ public class LoanPaymentService {
         transaction.setTransactionDate(LocalDateTime.now());
         transaction.setTransactionTime(LocalDateTime.now());
         
+        // Set initial and final balances (stored as String in entity)
+        transaction.setInitialBalance(String.format("%.2f", currentBalance));
+        transaction.setFinalBalance(String.format("%.2f", Math.max(0, newBalance)));
+        transaction.setAccountNumber(loan.getLoanref());
+        
         // Update loan balance
         loan.setAccountBalance(Math.max(0, newBalance));
         
@@ -75,10 +80,10 @@ public class LoanPaymentService {
             loan.setStatus("CLOSED");
             loan.setAccountBalance(0.0f);
             log.info("Loan {} fully paid and closed. Overpayment: {}", loanId, Math.abs(newBalance));
-        } else if ("OVERDUE".equals(loan.getStatus())) {
-            // Update status if payment was made on overdue loan
+        } else if ("OVERDUE".equals(loan.getStatus()) || "DEFAULTED".equals(loan.getStatus())) {
+            // Update status if payment was made on overdue or defaulted loan
             loan.setStatus("ACTIVE");
-            log.info("Loan {} status updated from OVERDUE to ACTIVE", loanId);
+            log.info("Loan {} status updated from {} to ACTIVE", loanId, loan.getStatus());
         }
         
         // Save entities

@@ -136,8 +136,13 @@ public class BulkProcessingController {
         Authentication authentication
     ) {
         try {
+            // Convert application IDs from Integer to Long (JSON deserializes numbers as Integer by default)
             @SuppressWarnings("unchecked")
-            List<Long> applicationIds = (List<Long>) request.get("applicationIds");
+            List<?> rawIds = (List<?>) request.get("applicationIds");
+            List<Long> applicationIds = rawIds.stream()
+                .map(id -> id instanceof Number ? ((Number) id).longValue() : Long.valueOf(id.toString()))
+                .collect(java.util.stream.Collectors.toList());
+            
             String disbursementMethod = (String) request.getOrDefault("disbursementMethod", "SACCO_ACCOUNT");
             String disbursedBy = authentication != null ? authentication.getName() : "system";
             

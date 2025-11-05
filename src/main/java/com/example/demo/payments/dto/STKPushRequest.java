@@ -20,9 +20,14 @@ public class STKPushRequest {
     
     // Optional: for linking to specific entities
     private Long customerId;
-    private Long accountId;  // Generic account ID for any account type
+    /**
+     * Legacy generic account identifier (remains for backward compatibility).
+     * Prefer the specific loan/savings/bank identifiers when available.
+     */
+    private Long accountId;
     private Long loanId;
     private Long savingsAccountId;
+    private Long bankAccountId;
     
     // Optional: provider metadata for multi-tenant configurations
     private Long providerConfigId;
@@ -33,12 +38,6 @@ public class STKPushRequest {
     
     // Validate phone number format
     public String getFormattedPhoneNumber() {
-        String phone = phoneNumber.replaceAll("\\D", "");
-        if (phone.startsWith("0")) {
-            phone = "254" + phone.substring(1);
-        } else if (!phone.startsWith("254")) {
-            phone = "254" + phone;
-        }
-        return phone;
+        return com.example.demo.payments.utils.PhoneNumberUtils.normalizeForMpesa(phoneNumber);
     }
 }

@@ -98,7 +98,9 @@ public class ApplicationSecurity {
                                 "/configuration/security",
                                 "/webjars/**",
                                 // M-PESA Callback endpoints - Security Exempt
-                                "/api/mpesa/callback/**").permitAll()
+                                "/api/mpesa/callback/**",
+                                // AutoPay C2B Callback endpoints - Security Exempt (no "mpesa" keyword per Daraja policy)
+                                "/api/auto-pay/callback/**").permitAll()
                         // Temporarily allow all requests for development
                         .anyRequest().permitAll()
                 )

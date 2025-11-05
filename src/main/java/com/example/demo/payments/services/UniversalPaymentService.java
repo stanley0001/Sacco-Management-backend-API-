@@ -1,5 +1,6 @@
 package com.example.demo.payments.services;
 
+import com.example.demo.payments.dto.DepositRequestCommand;
 import com.example.demo.payments.dto.STKPushRequest;
 import com.example.demo.payments.dto.STKPushResponse;
 import com.example.demo.payments.dto.UniversalPaymentRequest;
@@ -73,27 +74,65 @@ public class UniversalPaymentService {
         log.info("Initiating M-PESA STK Push for customer: {}", request.getCustomerId());
 
         String checkoutRequestId = null;
-        
+        TransactionRequest savedRequest = null;
+
         try {
-            // Build STK Push request
+            TransactionRequest.TransactionType transactionType = resolveTransactionType(request);
+            TransactionRequest.TransactionCategory transactionCategory = resolveTransactionCategory(request);
+
+            DepositRequestCommand command = DepositRequestCommand.builder()
+                .customerId(request.getCustomerId())
+                .customerName(request.getCustomerName())
+                .phoneNumber(request.getPhoneNumber())
+                .amount(request.getAmount())
+                .description(request.getDescription())
+                .initiatedBy(request.getInitiatedBy())
+                .savingsAccountId(request.getSavingsAccountId())
+                .targetAccountId(request.getTargetAccountId())
+                .loanId(request.getLoanId())
+                .loanReference(request.getLoanReference())
+                .paymentMethod(TransactionRequest.PaymentMethodType.MPESA)
+                .transactionType(transactionType)
+                .transactionCategory(transactionCategory)
+                .paymentChannel(TransactionRequest.PaymentChannel.MPESA)
+                .initialStatus(TransactionRequest.RequestStatus.PROCESSING)
+                .providerConfigId(request.getProviderConfigId())
+                .referenceNumber(request.getReferenceNumber())
+                .build();
+
+            savedRequest = transactionRequestService.createDepositRequest(command);
+
             STKPushRequest stkRequest = STKPushRequest.builder()
                 .phoneNumber(request.getPhoneNumber())
                 .amount(request.getAmount())
                 .accountReference(buildAccountReference(request))
                 .transactionDesc(buildTransactionDescription(request))
                 .customerId(request.getCustomerId())
+                .accountId(request.getTargetAccountId() != null ? request.getTargetAccountId() : request.getSavingsAccountId())
                 .loanId(request.getLoanId())
                 .savingsAccountId(request.getSavingsAccountId())
+                .bankAccountId(request.getTargetAccountId())
                 .providerConfigId(request.getProviderConfigId())
                 .providerCode(request.getProviderCode())
+                .transactionRequestId(savedRequest.getId())
                 .build();
 
-            // Initiate STK Push
             STKPushResponse stkResponse = mpesaService.initiateSTKPush(stkRequest);
             checkoutRequestId = stkResponse.getCheckoutRequestId();
-            
-            // Try to create pending deposit record for tracking (non-blocking)
-            if (request.getSavingsAccountId() != null && request.getTransactionType().equals("DEPOSIT")) {
+
+            MpesaTransaction mpesaTransaction = mpesaTransactionRepository
+                .findByCheckoutRequestId(checkoutRequestId)
+                .orElseThrow(() -> new RuntimeException("M-PESA transaction not persisted"));
+
+            if (stkRequest.getBankAccountId() != null) {
+                mpesaTransaction.setBankAccountId(stkRequest.getBankAccountId());
+            }
+            mpesaTransaction.setTransactionRequestId(savedRequest.getId());
+            mpesaTransactionRepository.save(mpesaTransaction);
+
+            TransactionRequest linkedRequest = transactionRequestService.linkMpesaTransaction(savedRequest.getId(), mpesaTransaction.getId());
+
+            if (request.getSavingsAccountId() != null && "DEPOSIT".equalsIgnoreCase(request.getTransactionType())) {
                 createPendingDepositAsync(request, checkoutRequestId);
             }
 
@@ -106,17 +145,46 @@ public class UniversalPaymentService {
                 .responseDescription(stkResponse.getResponseDescription())
                 .customerMessage("M-PESA STK Push sent to your phone! Enter your PIN to complete the payment.")
                 .requiresStatusCheck(true)
-                .transactionRequestId(null) // Will be set by callback when payment completes
+                .transactionRequestId(linkedRequest.getId())
                 .build();
-                
+
         } catch (Exception e) {
             log.error("Error initiating M-PESA STK Push: {}", e.getMessage());
-            
-            // Send failure SMS with paybill option
+
+            if (savedRequest != null) {
+                transactionRequestService.updateStatus(
+                    savedRequest.getId(),
+                    TransactionRequest.RequestStatus.FAILED,
+                    "MPESA_STK_INIT",
+                    e.getMessage()
+                );
+            }
+
             sendMpesaFailureSms(request.getPhoneNumber(), request.getAmount(), checkoutRequestId);
-            
+
             throw new RuntimeException("Failed to initiate M-PESA payment: " + e.getMessage(), e);
         }
+    }
+
+    private TransactionRequest.TransactionType resolveTransactionType(UniversalPaymentRequest request) {
+        if (request.getTransactionType() != null) {
+            try {
+                return TransactionRequest.TransactionType.valueOf(request.getTransactionType().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                log.warn("Unknown transaction type '{}', defaulting to DEPOSIT", request.getTransactionType());
+            }
+        }
+        return request.getLoanId() != null
+            ? TransactionRequest.TransactionType.LOAN_REPAYMENT
+            : TransactionRequest.TransactionType.DEPOSIT;
+    }
+
+    private TransactionRequest.TransactionCategory resolveTransactionCategory(UniversalPaymentRequest request) {
+        if (request.getLoanId() != null
+            || "LOAN_REPAYMENT".equalsIgnoreCase(request.getTransactionType())) {
+            return TransactionRequest.TransactionCategory.LOAN_REPAYMENT;
+        }
+        return TransactionRequest.TransactionCategory.SAVINGS_DEPOSIT;
     }
 
     /**

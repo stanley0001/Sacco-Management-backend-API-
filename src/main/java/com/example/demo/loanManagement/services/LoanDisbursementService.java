@@ -42,6 +42,7 @@ public class LoanDisbursementService {
     private final SmsService smsService;
     private final CustomerRepository customerRepository;
     private final MpesaService mpesaService;
+    private final LoanAccountingService loanAccountingService;
 
     /**
      * Process loan disbursement and create loan account with payment schedules
@@ -64,13 +65,35 @@ public class LoanDisbursementService {
         LoanApplication application = loanApplicationRepository.findById(applicationId)
             .orElseThrow(() -> new RuntimeException("Loan application not found: " + applicationId));
 
-        if (!"APPROVED".equals(application.getStatus())) {
-            throw new IllegalStateException("Cannot disburse loan. Application status: " + application.getStatus());
+        // Check if application is approved (supports both NEW status that gets approved and APPROVED status)
+        String status = application.getApplicationStatus();
+        if (!"APPROVED".equals(status) && !"AUTHORISED".equals(status)) {
+            throw new IllegalStateException("Cannot disburse loan. Application must be APPROVED or AUTHORISED. Current status: " + status);
+        }
+        
+        // Check if already disbursed
+        if ("DISBURSED".equals(status) || "PROCESSED".equals(status)) {
+            throw new IllegalStateException("Loan application already disbursed. Status: " + status);
         }
 
         // Get loan product for terms validation
-        Products product = productsRepository.findById(application.getProductId())
-            .orElseThrow(() -> new RuntimeException("Loan product not found: " + application.getProductId()));
+        Products product;
+        Long productId = application.getProductId();
+        if (productId != null) {
+            product = productsRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Loan product not found: " + productId));
+        } else {
+            String productCode = application.getProductCode();
+            if (productCode == null || productCode.trim().isEmpty()) {
+                throw new IllegalStateException("Loan application is missing both productId and productCode, cannot disburse");
+            }
+
+            product = productsRepository.findByCode(productCode)
+                .orElseThrow(() -> new RuntimeException("Loan product not found for code: " + productCode));
+
+            // Persist resolved product id for future operations within the same transaction
+            application.setProductId(product.getId());
+        }
 
         // Validate and set loan term
         int loanTerm = validateLoanTerm(application.getTerm(), product.getTerm());
@@ -81,11 +104,28 @@ public class LoanDisbursementService {
         // Generate payment schedules
         List<LoanRepaymentSchedule> schedules = generatePaymentSchedules(loanAccount, loanTerm);
         
+        // IMPORTANT: Validate schedules were created
+        if (schedules == null || schedules.isEmpty()) {
+            throw new IllegalStateException("Failed to generate repayment schedules for loan #" + loanAccount.getAccountId());
+        }
+        
+        log.info("✅ Generated {} repayment schedules for loan #{}", schedules.size(), loanAccount.getAccountId());
+        
         // Save schedules
         scheduleRepository.saveAll(schedules);
         
         // Process disbursement based on method
         processDisbursementByMethod(loanAccount, disbursementMethod, destination);
+        
+        // ⭐ POST DISBURSEMENT TO ACCOUNTING ⭐
+        try {
+            log.info("📊 Posting loan disbursement to accounting system");
+            loanAccountingService.postLoanDisbursement(loanAccount, disbursementMethod, disbursedBy);
+            log.info("✅ Loan disbursement posted to accounting successfully");
+        } catch (Exception e) {
+            log.error("❌ Failed to post loan disbursement to accounting", e);
+            // Log error but don't fail disbursement - accounting can be reconciled later
+        }
         
         // Send disbursement SMS notification
         sendDisbursementSMS(application, loanAccount, disbursementMethod);
@@ -126,18 +166,23 @@ public class LoanDisbursementService {
 
     /**
      * Validate loan term - use provided term if within limits, otherwise use product max term
+     * CRITICAL: Ensures minimum of 1 installment - all loans MUST have payment schedules
      */
     private int validateLoanTerm(Integer requestedTerm, Integer productTerm) {
+        // Ensure we always have at least 1 installment (minimum 1 month)
         if (requestedTerm == null || requestedTerm <= 0) {
-            return productTerm != null ? productTerm : 12; // Default to product term or 12 months
+            int defaultTerm = productTerm != null && productTerm > 0 ? productTerm : 12;
+            log.info("No term specified, using default: {} months", defaultTerm);
+            return Math.max(1, defaultTerm); // Ensure minimum 1 month
         }
         
-        if (productTerm != null && requestedTerm > productTerm) {
+        if (productTerm != null && productTerm > 0 && requestedTerm > productTerm) {
             log.warn("Requested term {} exceeds product term {}, using product term", requestedTerm, productTerm);
-            return productTerm;
+            return Math.max(1, productTerm); // Ensure minimum 1 month
         }
         
-        return requestedTerm;
+        // Ensure minimum of 1 month term
+        return Math.max(1, requestedTerm);
     }
 
     /**
@@ -155,6 +200,23 @@ public class LoanDisbursementService {
         
         // Calculate loan amounts
         double principalAmount = application.getAmount();
+        if (principalAmount <= 0) {
+            String loanAmountText = application.getLoanAmount();
+            if (loanAmountText != null && !loanAmountText.trim().isEmpty()) {
+                String sanitizedAmount = loanAmountText.replaceAll("[^0-9.]+", "");
+                if (!sanitizedAmount.isEmpty()) {
+                    try {
+                        principalAmount = Double.parseDouble(sanitizedAmount);
+                    } catch (NumberFormatException e) {
+                        log.warn("Unable to parse loan amount '{}' for application {}", loanAmountText, application.getId());
+                    }
+                }
+            }
+        }
+
+        if (principalAmount <= 0) {
+            throw new IllegalStateException("Loan application " + application.getId() + " is missing a valid amount");
+        }
         double interestRate = product.getInterest() != null ? product.getInterest().doubleValue() : 12.0;
         
         // Calculate total amount with interest (simple interest for now)
@@ -164,7 +226,11 @@ public class LoanDisbursementService {
         loanAccount.setInterestRate(BigDecimal.valueOf(interestRate));
         loanAccount.setPrincipalAmount(BigDecimal.valueOf(principalAmount));
         loanAccount.setTotalAmount(BigDecimal.valueOf(totalAmount));
+        loanAccount.setAmount((float) principalAmount);
+        loanAccount.setLoanReference(generateLoanReference(Long.valueOf(application.getCustomerId())));
+        loanAccount.setLoanref(generateLoanReference(Long.valueOf(application.getCustomerId())));
         loanAccount.setTotalOutstanding(BigDecimal.valueOf(totalAmount));
+        loanAccount.setPayableAmount((float) totalAmount);
         loanAccount.setOutstandingPrincipal(BigDecimal.valueOf(principalAmount));
         loanAccount.setOutstandingInterest(BigDecimal.valueOf(totalInterest));
         loanAccount.setTerm(term);
@@ -190,9 +256,16 @@ public class LoanDisbursementService {
 
     /**
      * Generate payment schedules for loan
+     * CRITICAL: Ensures ALL loans have payment schedules (even if just 1 installment)
      */
     private List<LoanRepaymentSchedule> generatePaymentSchedules(LoanAccount loanAccount, int termInMonths) {
         List<LoanRepaymentSchedule> schedules = new ArrayList<>();
+        
+        // Validate term - MUST be at least 1
+        if (termInMonths < 1) {
+            log.error("Invalid term: {}. Setting to 1 month minimum", termInMonths);
+            termInMonths = 1;
+        }
         
         BigDecimal totalAmount = loanAccount.getTotalAmount();
         BigDecimal monthlyAmount = totalAmount.divide(BigDecimal.valueOf(termInMonths), 2, RoundingMode.HALF_UP);
@@ -201,6 +274,9 @@ public class LoanDisbursementService {
         
         LocalDate startDate = loanAccount.getDisbursementDate();
         BigDecimal runningBalance = totalAmount;
+        
+        log.info("Generating {} payment schedule(s) for loan {}. Principal: {}, Total: {}", 
+            termInMonths, loanAccount.getId(), loanAccount.getPrincipalAmount(), totalAmount);
         
         for (int i = 1; i <= termInMonths; i++) {
             LoanRepaymentSchedule schedule = new LoanRepaymentSchedule();

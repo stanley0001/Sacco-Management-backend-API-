@@ -19,6 +19,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -284,21 +285,6 @@ public class SmsService {
             // Send SMS using the core method
             sendSmsWithConfig(config, formattedPhone, message);
 
-            // Save communication record
-            try {
-                Email communication = new Email();
-                communication.setMessageType("SMS");
-                communication.setRecipient(phoneNumber); // Use original phone number for display
-                communication.setMessage(message);
-                communication.setStatus("DELIVERED"); // Assume delivered since SMS was sent
-                communication.setDate(java.time.LocalDate.now());
-                emailRepo.save(communication);
-                log.info("Saved SMS communication record for {}", phoneNumber);
-            } catch (Exception e) {
-                log.error("Failed to save SMS communication record: {}", e.getMessage());
-                // Don't fail the SMS send if saving communication fails
-            }
-
             return builder.success(true).message("SMS sent successfully").build();
 
         } catch (Exception e) {
@@ -323,12 +309,13 @@ public class SmsService {
                 return;
             }
 
-            switch (config.getProviderType()) {
-                case AFRICAS_TALKING -> sendViaAfricasTalking(config, formattedPhone, message);
-                case TEXT_SMS -> sendViaTextSmsSingle(config, formattedPhone, message);
-                case CUSTOM_GET -> sendViaCustomGet(config, formattedPhone, message);
-                default -> log.warn("Unsupported SMS provider {}", config.getProviderType());
-            }
+//            switch (config.getProviderType()) {
+//                case AFRICAS_TALKING -> sendViaAfricasTalking(config, formattedPhone, message);
+//                case TEXT_SMS -> sendViaTextSmsSingle(config, formattedPhone, message);
+//                case CUSTOM_GET -> sendViaCustomGet(config, formattedPhone, message);
+//                default -> log.warn("Unsupported SMS provider {}", config.getProviderType());
+//            }
+            sendSmsWithConfig(config,formattedPhone,message);
 
         } catch (Exception e) {
             log.error("Failed to send SMS to {}: {}", phoneNumber, e.getMessage(), e);
@@ -597,11 +584,34 @@ public class SmsService {
     }
 
     private void sendSmsWithConfig(SmsConfig config, String phoneNumber, String message) {
-        switch (config.getProviderType()) {
-            case AFRICAS_TALKING -> sendViaAfricasTalking(config, phoneNumber, message);
-            case TEXT_SMS -> sendViaTextSmsSingle(config, phoneNumber, message);
-            case CUSTOM_GET -> sendViaCustomGet(config, phoneNumber, message);
-            default -> throw new IllegalArgumentException("Unsupported SMS provider type: " + config.getProviderType());
+        try {
+            switch (config.getProviderType()) {
+                case AFRICAS_TALKING:
+                    sendViaAfricasTalking(config, phoneNumber, message);
+                    break;
+                case TEXT_SMS:
+                    sendViaTextSmsSingle(config, phoneNumber, message);
+                    break;
+                case CUSTOM_GET:
+                    sendViaCustomGet(config, phoneNumber, message);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported SMS provider type: " + config.getProviderType());
+            }
+            
+            // Save communication record after SMS is sent
+            Email communication = new Email();
+            communication.setMessageType("SMS");
+            communication.setRecipient(phoneNumber);
+            // Truncate message to fit database constraint (900 chars safe limit)
+            communication.setMessage(truncateMessage(message, 900));
+            communication.setStatus("PROCESSED");
+            communication.setDate(java.time.LocalDate.now());
+            emailRepo.save(communication);
+            log.info("Saved SMS communication record for {}", phoneNumber);
+        } catch (Exception e) {
+            log.error("Failed to send SMS or save communication record: {}", e.getMessage());
+            // Don't fail the SMS send if saving communication fails
         }
     }
 
@@ -673,6 +683,63 @@ public class SmsService {
         } catch (Exception e) {
             log.error("Error calling SMS provider endpoint {}", url, e);
             return Map.of("error", e.getMessage());
+        }
+    }
+    
+    /**
+     * Safely truncate message to fit database constraints
+     * @param message Original message
+     * @param maxLength Maximum allowed length
+     * @return Truncated message if needed
+     */
+    private String truncateMessage(String message, int maxLength) {
+        if (message == null) {
+            return null;
+        }
+        if (message.length() <= maxLength) {
+            return message;
+        }
+        // Truncate and add indicator
+        return message.substring(0, maxLength - 15) + "... [truncated]";
+    }
+    
+    /**
+     * Get SMS history from database
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return List of SMS history records
+     */
+    public List<Map<String, Object>> getSmsHistory(int page, int size) {
+        try {
+            // Get all SMS communications from email repository
+            List<Email> smsRecords = emailRepo.findAllOrderByIdDesc();
+            
+            // Filter only SMS type messages
+            List<Email> smsOnly = smsRecords.stream()
+                .filter(email -> "SMS".equalsIgnoreCase(email.getMessageType()))
+                .limit(size)
+                .skip((long) page * size)
+                .toList();
+            
+            // Convert to Map format for frontend compatibility
+            return smsOnly.stream()
+                .map(sms -> {
+                    Map<String, Object> record = new java.util.HashMap<>();
+                    record.put("id", sms.getId());
+                    record.put("recipient", sms.getRecipient());
+                    record.put("message", sms.getMessage());
+                    record.put("status", sms.getStatus() != null ? sms.getStatus() : "SENT");
+                    record.put("sentDate", sms.getDate() != null ? sms.getDate().atStartOfDay().toString() : 
+                        java.time.LocalDateTime.now().toString());
+                    record.put("cost", 2.50); // Default SMS cost - could be stored in database
+                    return record;
+                })
+                .collect(java.util.stream.Collectors.toList());
+                
+        } catch (Exception e) {
+            log.error("Error fetching SMS history from database", e);
+            // Return empty list on error
+            return new java.util.ArrayList<>();
         }
     }
 }

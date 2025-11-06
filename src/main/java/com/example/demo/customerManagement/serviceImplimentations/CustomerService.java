@@ -175,6 +175,12 @@ public class CustomerService implements CustomerS {
                 .orElse(null);
     }
 
+    public ClientInfo findClientByPhone(String phone) {
+        return customerRepo.findByphoneNumber(phone)
+                .map(this::buildClientInfo)
+                .orElse(null);
+    }
+
     public ClientInfo findByExternalId(String externalId) {
         return customerRepo.findByExternalId(externalId)
                 .map(this::buildClientInfo)

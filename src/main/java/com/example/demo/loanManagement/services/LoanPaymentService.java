@@ -1,5 +1,6 @@
 package com.example.demo.loanManagement.services;
 
+import com.example.demo.customerManagement.parsistence.entities.Customer;
 import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
 import com.example.demo.loanManagement.parsistence.entities.loanTransactions;
 import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
@@ -160,7 +161,11 @@ public class LoanPaymentService {
     public List<loanTransactions> getCustomerPayments(String customerId) {
         return transactionsRepo.findByCustomerIdOrderByTransactionIdDesc(customerId);
     }
-    
+
+    public LoanAccount getPayableLoanAccount(Customer customer) {
+        return loanAccountRepo.findByCustomerIdAndStatusNot(String.valueOf(customer.getId()),"PAID").orElse(null);
+    }
+
     /**
      * DTO for payment summary
      */

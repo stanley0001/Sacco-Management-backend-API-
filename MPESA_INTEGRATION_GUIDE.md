@@ -37,7 +37,7 @@ mpesa.result.url=${BASE_URL}/api/mpesa/result
 
 #### `STKPushResponse.java`
 ```java
-package com.example.demo.payments.dto;
+package com.example.demo.finance.payments.dto;
 
 import lombok.Data;
 
@@ -53,7 +53,7 @@ public class STKPushResponse {
 
 #### `MpesaCallbackResponse.java`
 ```java
-package com.example.demo.payments.dto;
+package com.example.demo.finance.payments.dto;
 
 import lombok.Data;
 import java.util.Map;
@@ -91,7 +91,7 @@ public class MpesaCallbackResponse {
 
 #### `B2CRequest.java`
 ```java
-package com.example.demo.payments.dto;
+package com.example.demo.finance.payments.dto;
 
 import lombok.Builder;
 import lombok.Data;
@@ -115,7 +115,7 @@ public class B2CRequest {
 
 ### **`MpesaAuthService.java`**
 ```java
-package com.example.demo.payments.services;
+package com.example.demo.finance.payments.services;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -179,11 +179,11 @@ public class MpesaAuthService {
 
 ### **`MpesaService.java`**
 ```java
-package com.example.demo.payments.services;
+package com.example.demo.finance.payments.services;
 
-import com.example.demo.payments.dto.*;
-import com.example.demo.payments.entities.MpesaTransaction;
-import com.example.demo.payments.repositories.MpesaTransactionRepository;
+import com.example.demo.finance.payments.dto.*;
+import com.example.demo.finance.payments.entities.MpesaTransaction;
+import com.example.demo.finance.payments.repositories.MpesaTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -381,9 +381,9 @@ public class MpesaService {
 
 ### **`MpesaTransactionRepository.java`**
 ```java
-package com.example.demo.payments.repositories;
+package com.example.demo.finance.payments.repositories;
 
-import com.example.demo.payments.entities.MpesaTransaction;
+import com.example.demo.finance.payments.entities.MpesaTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -420,10 +420,10 @@ public interface MpesaTransactionRepository extends JpaRepository<MpesaTransacti
 
 ### **`MpesaController.java`**
 ```java
-package com.example.demo.payments.controllers;
+package com.example.demo.finance.payments.controllers;
 
-import com.example.demo.payments.dto.*;
-import com.example.demo.payments.services.MpesaService;
+import com.example.demo.finance.payments.dto.*;
+import com.example.demo.finance.payments.services.MpesaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -490,7 +490,7 @@ public class MpesaController {
 
 ### **`RestTemplateConfig.java`**
 ```java
-package com.example.demo.payments.config;
+package com.example.demo.finance.payments.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -151,17 +151,10 @@ application = applicationRepo.save(application);
 
 ```java
 // Loan Management
-import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
-import com.example.demo.loanManagement.parsistence.repositories.ApplicationRepo;
-import com.example.demo.loanManagement.parsistence.repositories.ProductRepo;
 
 // Customer Management
-import com.example.demo.customerManagement.parsistence.repositories.CustomerRepository;
 
 // Savings Management
-import com.example.demo.savingsManagement.persistence.repositories.SavingsAccountRepository;
-import com.example.demo.savingsManagement.persistence.repositories.SavingsProductRepository;
-import com.example.demo.savingsManagement.persistence.repositories.SavingsTransactionRepository;
 ```
 
 **Note:** The savings package uses `persistence` (correct spelling), not `parsistence` (typo in loan management).

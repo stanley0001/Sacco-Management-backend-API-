@@ -1,8 +1,8 @@
 package com.example.demo.system.configuration;
 
-import com.example.demo.userManagements.services.auth.CustomAuthenticationFailureHandler;
-import com.example.demo.userManagements.services.auth.JWTauthFilter;
-import com.example.demo.userManagements.services.auth.authService;
+import com.example.demo.system.userManagements.services.auth.CustomAuthenticationFailureHandler;
+import com.example.demo.system.userManagements.services.auth.JWTauthFilter;
+import com.example.demo.system.userManagements.services.auth.authService;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Arrays;

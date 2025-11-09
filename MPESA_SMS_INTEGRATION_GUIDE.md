@@ -32,7 +32,7 @@ This guide documents the comprehensive M-PESA STK Push and SMS notification inte
 ### Backend Components
 
 #### 1. UniversalPaymentService
-- **Location**: `com.example.demo.payments.services.UniversalPaymentService`
+- **Location**: `com.example.demo.finance.payments.services.UniversalPaymentService`
 - **Purpose**: Central payment processing with M-PESA and SMS integration
 - **Key Methods**:
   - `processPayment()` - Main payment processing entry point
@@ -41,7 +41,7 @@ This guide documents the comprehensive M-PESA STK Push and SMS notification inte
   - `sendOverdueNotification()` - Overdue payment alerts
 
 #### 2. Enhanced MpesaService
-- **Location**: `com.example.demo.payments.services.MpesaService`
+- **Location**: `com.example.demo.finance.payments.services.MpesaService`
 - **Enhancements**:
   - Integrated SMS notifications for all payment events
   - Improved error handling with user notifications

@@ -1,13 +1,13 @@
 package com.example.demo.system.services;
 
-import com.example.demo.customerManagement.serviceImplimentations.CustomerService;
-import com.example.demo.loanManagement.parsistence.entities.Disbursements;
-import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
-import com.example.demo.loanManagement.parsistence.entities.Products;
-import com.example.demo.loanManagement.parsistence.entities.Subscriptions;
-import com.example.demo.loanManagement.services.LoanAccountService;
-import com.example.demo.loanManagement.services.ProductService;
-import com.example.demo.loanManagement.services.SubscriptionService;
+import com.example.demo.erp.customerManagement.serviceImplimentations.CustomerService;
+import com.example.demo.finance.loanManagement.parsistence.entities.Disbursements;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.finance.loanManagement.parsistence.entities.Products;
+import com.example.demo.finance.loanManagement.parsistence.entities.Subscriptions;
+import com.example.demo.finance.loanManagement.services.LoanAccountService;
+import com.example.demo.finance.loanManagement.services.ProductService;
+import com.example.demo.finance.loanManagement.services.SubscriptionService;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Qualifier;
 

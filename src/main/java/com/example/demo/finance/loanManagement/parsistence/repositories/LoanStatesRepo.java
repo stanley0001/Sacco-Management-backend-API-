@@ -1,0 +1,11 @@
+package com.example.demo.finance.loanManagement.parsistence.repositories;
+
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanStates;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanStates;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface LoanStatesRepo extends JpaRepository<LoanStates, Long> {
+    List<LoanStates> findByAccountNumber(String valueOf);
+}

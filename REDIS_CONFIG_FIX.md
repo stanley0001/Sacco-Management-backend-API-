@@ -9,7 +9,7 @@
 
 **Error:**
 ```
-Parameter 0 of constructor in com.example.demo.mobile.services.OtpService required a bean of type 
+Parameter 0 of constructor in com.example.demo.channels.mobile.services.OtpService required a bean of type 
 'org.springframework.data.redis.core.RedisTemplate' that could not be found.
 ```
 

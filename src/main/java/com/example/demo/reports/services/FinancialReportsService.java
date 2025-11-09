@@ -1,14 +1,14 @@
 package com.example.demo.reports.services;
 
-import com.example.demo.accounting.entities.ChartOfAccounts;
-import com.example.demo.accounting.entities.JournalEntry;
-import com.example.demo.accounting.entities.JournalEntryLine;
-import com.example.demo.accounting.repositories.ChartOfAccountsRepo;
-import com.example.demo.accounting.repositories.GeneralLedgerRepository;
-import com.example.demo.accounting.repositories.JournalEntryRepo;
-import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
-import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
-import com.example.demo.savingsManagement.persistence.repositories.SavingsAccountRepository;
+import com.example.demo.finance.accounting.entities.ChartOfAccounts;
+import com.example.demo.finance.accounting.entities.JournalEntry;
+import com.example.demo.finance.accounting.entities.JournalEntryLine;
+import com.example.demo.finance.accounting.repositories.ChartOfAccountsRepo;
+import com.example.demo.finance.accounting.repositories.GeneralLedgerRepository;
+import com.example.demo.finance.accounting.repositories.JournalEntryRepo;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.finance.loanManagement.parsistence.repositories.LoanAccountRepo;
+import com.example.demo.finance.savingsManagement.persistence.repositories.SavingsAccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

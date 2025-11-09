@@ -106,8 +106,8 @@ Add to your `application.yml`:
 ```yaml
 logging:
   level:
-    com.example.demo.payments.controllers.MpesaCallbackController: DEBUG
-    com.example.demo.payments.services.MpesaService: DEBUG
+    com.example.demo.finance.payments.controllers.MpesaCallbackController: DEBUG
+    com.example.demo.finance.payments.services.MpesaService: DEBUG
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 ```

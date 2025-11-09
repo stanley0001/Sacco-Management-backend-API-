@@ -10,14 +10,14 @@ Congratulations! The complete M-PESA integration backend is now ready. Here's wh
 
 ### **1. Entity Models** (2 files) ✅
 ```
-📁 src/main/java/com/example/demo/payments/entities/
+📁 src/main/java/com/example/demo.finance.payments.entities/
 ├── ✅ MpesaTransaction.java - Complete transaction tracking
 └── ✅ PaymentMethod.java - Customer payment methods
 ```
 
 ### **2. DTOs** (4 files) ✅
 ```
-📁 src/main/java/com/example/demo/payments/dto/
+📁 src/main/java/com/example/demo.finance.payments.dto/
 ├── ✅ STKPushRequest.java - STK push request payload
 ├── ✅ STKPushResponse.java - STK push response
 ├── ✅ MpesaCallbackResponse.java - Callback handling
@@ -26,27 +26,27 @@ Congratulations! The complete M-PESA integration backend is now ready. Here's wh
 
 ### **3. Repositories** (2 files) ✅
 ```
-📁 src/main/java/com/example/demo/payments/repositories/
+📁 src/main/java/com/example/demo.finance.payments.repositories/
 ├── ✅ MpesaTransactionRepository.java - Transaction queries
 └── ✅ PaymentMethodRepository.java - Payment method queries
 ```
 
 ### **4. Services** (2 files) ✅
 ```
-📁 src/main/java/com/example/demo/payments/services/
+📁 src/main/java/com/example/demo.finance.payments.services/
 ├── ✅ MpesaAuthService.java - OAuth token management
 └── ✅ MpesaService.java - Core M-PESA operations
 ```
 
 ### **5. Controllers** (1 file) ✅
 ```
-📁 src/main/java/com/example/demo/payments/controllers/
+📁 src/main/java/com/example/demo.finance.payments.controllers/
 └── ✅ MpesaController.java - REST API endpoints
 ```
 
 ### **6. Configuration** (1 file) ✅
 ```
-📁 src/main/java/com/example/demo/payments/config/
+📁 src/main/java/com/example/demo.finance.payments.config/
 └── ✅ RestTemplateConfig.java - HTTP client configuration
 ```
 

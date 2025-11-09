@@ -1,23 +1,23 @@
 package com.example.demo.system.services;
 
-import com.example.demo.customerManagement.parsistence.entities.Customer;
-import com.example.demo.customerManagement.parsistence.repositories.CustomerRepo;
-import com.example.demo.loanManagement.parsistence.entities.*;
-import com.example.demo.loanManagement.parsistence.repositories.*;
-import com.example.demo.savingsManagement.persistence.entities.SavingsAccount;
-import com.example.demo.savingsManagement.persistence.entities.SavingsProduct;
-import com.example.demo.savingsManagement.persistence.entities.SavingsTransaction;
-import com.example.demo.savingsManagement.persistence.repositories.SavingsAccountRepository;
-import com.example.demo.savingsManagement.persistence.repositories.SavingsProductRepository;
-import com.example.demo.savingsManagement.persistence.repositories.SavingsTransactionRepository;
-import com.example.demo.userManagements.parsitence.enitities.Roles;
-import com.example.demo.userManagements.parsitence.enitities.Users;
-import com.example.demo.userManagements.parsitence.enitities.rolePermissions;
-import com.example.demo.userManagements.parsitence.models.Security;
-import com.example.demo.userManagements.parsitence.repositories.permissionsRepo;
-import com.example.demo.userManagements.parsitence.repositories.rolesRepo;
-import com.example.demo.userManagements.parsitence.repositories.securityRepo;
-import com.example.demo.userManagements.parsitence.repositories.userRepo;
+import com.example.demo.erp.customerManagement.parsistence.entities.Customer;
+import com.example.demo.erp.customerManagement.parsistence.repositories.CustomerRepo;
+import com.example.demo.finance.loanManagement.parsistence.entities.*;
+import com.example.demo.finance.loanManagement.parsistence.repositories.*;
+import com.example.demo.finance.savingsManagement.persistence.entities.SavingsAccount;
+import com.example.demo.finance.savingsManagement.persistence.entities.SavingsProduct;
+import com.example.demo.finance.savingsManagement.persistence.entities.SavingsTransaction;
+import com.example.demo.finance.savingsManagement.persistence.repositories.SavingsAccountRepository;
+import com.example.demo.finance.savingsManagement.persistence.repositories.SavingsProductRepository;
+import com.example.demo.finance.savingsManagement.persistence.repositories.SavingsTransactionRepository;
+import com.example.demo.system.userManagements.parsitence.enitities.Roles;
+import com.example.demo.system.userManagements.parsitence.enitities.Users;
+import com.example.demo.system.userManagements.parsitence.enitities.rolePermissions;
+import com.example.demo.system.userManagements.parsitence.models.Security;
+import com.example.demo.system.userManagements.parsitence.repositories.permissionsRepo;
+import com.example.demo.system.userManagements.parsitence.repositories.rolesRepo;
+import com.example.demo.system.userManagements.parsitence.repositories.securityRepo;
+import com.example.demo.system.userManagements.parsitence.repositories.userRepo;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import net.datafaker.Faker;
 import org.slf4j.Logger;
@@ -975,8 +975,8 @@ public class DataSeeder implements CommandLineRunner {
 
         for (LoanAccount account : accounts) {
             // Create disbursement
-            com.example.demo.loanManagement.parsistence.entities.loanTransactions disbursement = 
-                new com.example.demo.loanManagement.parsistence.entities.loanTransactions();
+            com.example.demo.finance.loanManagement.parsistence.entities.loanTransactions disbursement =
+                new com.example.demo.finance.loanManagement.parsistence.entities.loanTransactions();
             disbursement.setAccountId(account.getAccountId());
             disbursement.setCustomerId(account.getCustomerId());
             disbursement.setAmount(account.getAmount());
@@ -993,8 +993,8 @@ public class DataSeeder implements CommandLineRunner {
                 float totalPaid = 0;
 
                 for (int i = 0; i < numPayments && totalPaid < account.getAmountPaid(); i++) {
-                    com.example.demo.loanManagement.parsistence.entities.loanTransactions payment = 
-                        new com.example.demo.loanManagement.parsistence.entities.loanTransactions();
+                    com.example.demo.finance.loanManagement.parsistence.entities.loanTransactions payment =
+                        new com.example.demo.finance.loanManagement.parsistence.entities.loanTransactions();
                     
                     float paymentAmount = Math.min(
                         account.getAmountPaid() - totalPaid,

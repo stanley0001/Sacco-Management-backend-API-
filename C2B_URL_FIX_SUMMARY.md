@@ -17,7 +17,7 @@ This was causing **401 Unauthorized** errors when attempting to register C2B val
 
 ### 1. Created New Controller: `AutoPayCallbackController.java` ✅
 
-**Location:** `src/main/java/com/example/demo/payments/controllers/AutoPayCallbackController.java`
+**Location:** `src/main/java/com/example/demo.finance.payments.controllers/AutoPayCallbackController.java`
 
 **New Endpoints (No Restricted Keywords):**
 ```
@@ -102,7 +102,7 @@ BigDecimal remainingBalance = resolveLoanBalance(transaction.getLoanId());
 
 **Added Dependency:**
 ```java
-private final com.example.demo.loanManagement.services.LoanPaymentService loanPaymentService;
+private final com.example.demo.finance.loanManagement.services.LoanPaymentService loanPaymentService;
 ```
 
 ---

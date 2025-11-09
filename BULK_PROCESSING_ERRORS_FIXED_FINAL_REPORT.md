@@ -3,8 +3,8 @@
 ## 🎯 **ALL CRITICAL ISSUES RESOLVED**
 
 ### **1. ✅ BulkProcessingService Import Errors - FIXED**
-- **❌ Error:** `import com.example.demo.loanManagement.parsistence.entities.loanApplications cannot be resolved`
-- **✅ Fix:** Changed to `import com.example.demo.loanManagement.parsistence.entities.LoanApplication`
+- **❌ Error:** `import com.example.demo.finance.loanManagement.parsistence.entities.loanApplications cannot be resolved`
+- **✅ Fix:** Changed to `import com.example.demo.finance.loanManagement.parsistence.entities.LoanApplication`
 
 ### **2. ✅ Customer Entity Missing Methods - FIXED**
 - **❌ Error:** `The method setIdNumber(String) is undefined for the type Customer`

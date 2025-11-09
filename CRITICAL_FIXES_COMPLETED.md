@@ -95,7 +95,7 @@ Many errors are due to missing model classes that were referenced but never crea
    - LoanBookUploadEvent
    - SubscriptionEvent
 
-3. **com.example.demo.loanManagement.parsistence.models.***
+3. **com.example.demo.finance.loanManagement.parsistence.models.***
    - LoanCalculator
    - LoanCalculatorResponse
    - LoanAccountModel
@@ -123,7 +123,7 @@ Many errors are due to missing model classes that were referenced but never crea
    - CustomAuthenticationFailureHandler
    - authService
 
-7. **com.example.demo.savingsManagement.*** (Entire package missing)
+7. **com.example.demo.finance.savingsManagement.*** (Entire package missing)
    - SavingsAccount
    - SavingsProduct
    - SavingsTransaction

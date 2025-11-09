@@ -1,10 +1,10 @@
 package com.example.demo.reports.services;
 
-import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
-import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.finance.loanManagement.parsistence.repositories.LoanAccountRepo;
 import com.example.demo.reports.models.LoanPortfolioReport;
 import com.example.demo.reports.models.SASRAReport;
-import com.example.demo.savingsManagement.persistence.repositories.SavingsAccountRepository;
+import com.example.demo.finance.savingsManagement.persistence.repositories.SavingsAccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -23,7 +23,7 @@ Loan restructuring allows modifying existing loan terms (principal, interest rat
 **File:** `src/main/java/com/example/demo/loanManagement/parsistence/entities/LoanRestructuring.java` (NEW)
 
 ```java
-package com.example.demo.loanManagement.parsistence.entities;
+package com.example.demo.finance.loanManagement.parsistence.entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -120,9 +120,9 @@ public class LoanRestructuring {
 **File:** `src/main/java/com/example/demo/loanManagement/parsistence/repositories/LoanRestructuringRepository.java` (NEW)
 
 ```java
-package com.example.demo.loanManagement.parsistence.repositories;
+package com.example.demo.finance.loanManagement.parsistence.repositories;
 
-import com.example.demo.loanManagement.parsistence.entities.LoanRestructuring;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanRestructuring;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -154,14 +154,14 @@ public interface LoanRestructuringRepository extends JpaRepository<LoanRestructu
 **File:** `src/main/java/com/example/demo/loanManagement/services/LoanRestructuringService.java` (NEW)
 
 ```java
-package com.example.demo.loanManagement.services;
+package com.example.demo.finance.loanManagement.services;
 
-import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
-import com.example.demo.loanManagement.parsistence.entities.LoanRepaymentSchedule;
-import com.example.demo.loanManagement.parsistence.entities.LoanRestructuring;
-import com.example.demo.loanManagement.parsistence.repositories.LoanAccountRepo;
-import com.example.demo.loanManagement.parsistence.repositories.LoanRepaymentScheduleRepository;
-import com.example.demo.loanManagement.parsistence.repositories.LoanRestructuringRepository;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanRepaymentSchedule;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanRestructuring;
+import com.example.demo.finance.loanManagement.parsistence.repositories.LoanAccountRepo;
+import com.example.demo.finance.loanManagement.parsistence.repositories.LoanRepaymentScheduleRepository;
+import com.example.demo.finance.loanManagement.parsistence.repositories.LoanRestructuringRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

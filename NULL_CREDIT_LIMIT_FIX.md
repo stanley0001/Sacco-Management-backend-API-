@@ -2,7 +2,7 @@
 
 ## 🎯 Problem
 ```
-"error": "Cannot invoke \"java.lang.Integer.intValue()\" because the return value of \"com.example.demo.loanManagement.parsistence.entities.Subscriptions.getCreditLimit()\" is null"
+"error": "Cannot invoke \"java.lang.Integer.intValue()\" because the return value of \"com.example.demo.finance.loanManagement.parsistence.entities.Subscriptions.getCreditLimit()\" is null"
 ```
 
 **Root Cause:** Subscriptions created without credit limit had null values, causing errors during loan application.

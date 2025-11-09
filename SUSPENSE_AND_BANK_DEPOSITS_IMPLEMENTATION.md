@@ -425,8 +425,8 @@ Expected:
 
 ```properties
 # application.properties
-logging.level.com.example.demo.payments.services.TransactionApprovalService=DEBUG
-logging.level.com.example.demo.payments.services.BankDepositService=DEBUG
+logging.level.com.example.demo.finance.payments.services.TransactionApprovalService=DEBUG
+logging.level.com.example.demo.finance.payments.services.BankDepositService=DEBUG
 ```
 
 ### Daily Welfare Limit

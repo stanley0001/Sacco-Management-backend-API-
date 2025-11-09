@@ -1,9 +1,9 @@
 package com.example.demo.system.services;
 
 import com.example.demo.system.parsitence.models.Schedule.Schedule;
-import com.example.demo.loanManagement.parsistence.entities.loanTransactions;
+import com.example.demo.finance.loanManagement.parsistence.entities.loanTransactions;
 import com.example.demo.system.parsitence.repositories.ScheduleRepo;
-import com.example.demo.loanManagement.parsistence.repositories.TransactionsRepo;
+import com.example.demo.finance.loanManagement.parsistence.repositories.TransactionsRepo;
 import lombok.extern.log4j.Log4j2;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;

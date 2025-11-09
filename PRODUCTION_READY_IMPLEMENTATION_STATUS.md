@@ -49,7 +49,7 @@
 
 #### **Services Needed** (3 files)
 ```
-📁 src/main/java/com/example/demo/payments/services/
+📁 src/main/java/com/example/demo.finance.payments.services/
 ├── ✅ MpesaAuthService.java (in guide - needs creation)
 ├── ✅ MpesaService.java (in guide - needs creation)
 └── 🔲 PaymentService.java (needs creation)
@@ -57,13 +57,13 @@
 
 #### **Controllers Needed** (1 file)
 ```
-📁 src/main/java/com/example/demo/payments/controllers/
+📁 src/main/java/com/example/demo.finance.payments.controllers/
 └── ✅ MpesaController.java (in guide - needs creation)
 ```
 
 #### **Additional DTOs** (3 files)
 ```
-📁 src/main/java/com/example/demo/payments/dto/
+📁 src/main/java/com/example/demo.finance.payments.dto/
 ├── ✅ STKPushResponse.java (in guide - needs creation)
 ├── ✅ MpesaCallbackResponse.java (in guide - needs creation)
 └── ✅ B2CRequest.java (in guide - needs creation)
@@ -71,7 +71,7 @@
 
 #### **Configuration** (2 files)
 ```
-📁 src/main/java/com/example/demo/payments/config/
+📁 src/main/java/com/example/demo.finance.payments.config/
 ├── ✅ RestTemplateConfig.java (in guide - needs creation)
 └── 🔲 PaymentConfig.java (needs creation)
 ```
@@ -446,7 +446,7 @@ export class QuickActionsService {
 ### **Create All M-PESA Service Files**
 ```bash
 # From backend root directory
-cd src/main/java/com/example/demo/payments/
+cd src/main/java/com/example/demo.finance.payments.
 
 # Create directories
 mkdir -p services controllers config dto

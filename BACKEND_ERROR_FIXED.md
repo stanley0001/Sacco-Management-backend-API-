@@ -10,9 +10,9 @@
 ### Error Message:
 ```
 Ambiguous mapping. Cannot map 'mpesaPayBillController' method 
-com.example.demo.payments.controllers.MpesaPayBillController#healthCheck()
+com.example.demo.finance.payments.controllers.MpesaPayBillController#healthCheck()
 to {GET [/api/mpesa/callback/health]}: There is already 'mpesaCallbackController' bean method
-com.example.demo.payments.controllers.MpesaCallbackController#health() mapped.
+com.example.demo.finance.payments.controllers.MpesaCallbackController#health() mapped.
 ```
 
 ### Root Cause:

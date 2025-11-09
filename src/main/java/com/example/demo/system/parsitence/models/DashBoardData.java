@@ -1,6 +1,6 @@
 package com.example.demo.system.parsitence.models;
 
-import com.example.demo.loanManagement.parsistence.entities.LoanApplication;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanApplication;
 import lombok.Getter;
 import lombok.Setter;
 

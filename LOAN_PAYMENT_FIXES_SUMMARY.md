@@ -147,9 +147,9 @@ Optional<MpesaTransaction> findByCheckoutRequestId(String checkoutRequestId);
 ```
 
 **Files Involved:**
-- `src/main/java/com/example/demo/payments/entities/MpesaTransaction.java` (Entity)
-- `src/main/java/com/example/demo/payments/repositories/MpesaTransactionRepository.java` (Repository)
-- `src/main/java/com/example/demo/payments/services/MpesaService.java` (Service)
+- `src/main/java/com/example/demo.finance.payments.entities/MpesaTransaction.java` (Entity)
+- `src/main/java/com/example/demo.finance.payments.repositories/MpesaTransactionRepository.java` (Repository)
+- `src/main/java/com/example/demo.finance.payments.services/MpesaService.java` (Service)
 
 ---
 

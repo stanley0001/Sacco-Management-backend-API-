@@ -1,21 +1,16 @@
 package com.example.demo.system.services;
 
-import com.example.demo.banking.services.BankingService;
-import com.example.demo.customerManagement.parsistence.entities.Customer;
-import com.example.demo.customerManagement.serviceImplimentations.CustomerService;
-import com.example.demo.enums.Statuses;
-import com.example.demo.events.appEvents.CreateAccountEvent;
-import com.example.demo.events.appEvents.CreateRepaymentScheduleEvent;
-import com.example.demo.events.appEvents.SubscriptionEvent;
-import com.example.demo.loanManagement.parsistence.entities.LoanAccount;
-import com.example.demo.loanManagement.parsistence.entities.LoanRepaymentSchedule;
-import com.example.demo.loanManagement.parsistence.entities.Products;
-import com.example.demo.loanManagement.parsistence.models.LoanAccountModel;
-import com.example.demo.loanManagement.parsistence.models.LoanBookUpload;
-import com.example.demo.loanManagement.parsistence.models.RepaymentSchedules;
-import com.example.demo.loanManagement.parsistence.repositories.LoanRepaymentScheduleRepository;
-import com.example.demo.loanManagement.services.LoanService;
-import lombok.extern.apachecommons.CommonsLog;
+import com.example.demo.finance.banking.services.BankingService;
+import com.example.demo.erp.customerManagement.parsistence.entities.Customer;
+import com.example.demo.erp.customerManagement.serviceImplimentations.CustomerService;
+import com.example.demo.system.events.appEvents.CreateAccountEvent;
+import com.example.demo.system.events.appEvents.CreateRepaymentScheduleEvent;
+import com.example.demo.system.events.appEvents.SubscriptionEvent;
+import com.example.demo.finance.loanManagement.parsistence.entities.LoanAccount;
+import com.example.demo.finance.loanManagement.parsistence.entities.Products;
+import com.example.demo.finance.loanManagement.parsistence.models.LoanBookUpload;
+import com.example.demo.finance.loanManagement.parsistence.repositories.LoanRepaymentScheduleRepository;
+import com.example.demo.finance.loanManagement.services.LoanService;
 import lombok.extern.log4j.Log4j2;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
+
 @Service
 @Log4j2
 public class EventProcessor {

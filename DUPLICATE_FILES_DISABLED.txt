@@ -3,16 +3,16 @@
 The following duplicate files have been disabled to prevent Spring Boot bean definition conflicts:
 
 1. **src/main/java/com/example/demo/mpesa/repositories/MpesaTransactionRepository.java**
-   - DISABLED - Use: com.example.demo.payments.repositories.MpesaTransactionRepository instead
+   - DISABLED - Use: com.example.demo.finance.payments.repositories.MpesaTransactionRepository instead
    - Original file has been emptied/commented out
 
 2. **src/main/java/com/example/demo/mpesa/entities/MpesaTransaction.java**
-   - DISABLED - Use: com.example.demo.payments.entities.MpesaTransaction instead
+   - DISABLED - Use: com.example.demo.finance.payments.entities.MpesaTransaction instead
    - Original file has been emptied/commented out
 
 ## Active Files to Use:
-- ✅ com.example.demo.payments.repositories.MpesaTransactionRepository
-- ✅ com.example.demo.payments.entities.MpesaTransaction
+- ✅ com.example.demo.finance.payments.repositories.MpesaTransactionRepository
+- ✅ com.example.demo.finance.payments.entities.MpesaTransaction
 
 ## Solution Applied:
 - Added `spring.main.allow-bean-definition-overriding=true` in application.properties

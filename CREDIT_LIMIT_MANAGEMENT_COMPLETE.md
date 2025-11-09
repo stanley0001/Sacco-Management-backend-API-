@@ -4,7 +4,7 @@
 
 ### **1. Null Pointer Error**
 ```
-"error": "Cannot invoke \"java.lang.Integer.toString()\" because the return value of \"com.example.demo.loanManagement.parsistence.entities.Subscriptions.getCreditLimit()\" is null"
+"error": "Cannot invoke \"java.lang.Integer.toString()\" because the return value of \"com.example.demo.finance.loanManagement.parsistence.entities.Subscriptions.getCreditLimit()\" is null"
 ```
 **Solution:** Added null safety checks with fallback to 0
 

@@ -10,7 +10,7 @@
 **Error:**
 ```
 org.hibernate.AnnotationException: Association 'com.example.demo.customerManagement.parsistence.entities.Customer.loanBookUpload' 
-targets an unknown entity named 'com.example.demo.loanManagement.parsistence.models.LoanBookUpload'
+targets an unknown entity named 'com.example.demo.finance.loanManagement.parsistence.models.LoanBookUpload'
 ```
 
 **Root Cause:**  
@@ -35,7 +35,7 @@ public class Customer {
 
 **BEFORE (❌ Not a JPA Entity):**
 ```java
-package com.example.demo.loanManagement.parsistence.models;
+package com.example.demo.finance.loanManagement.parsistence.models;
 
 import lombok.Data;
 import lombok.ToString;
@@ -52,7 +52,7 @@ public class LoanBookUpload {
 
 **AFTER (✅ Proper JPA Entity):**
 ```java
-package com.example.demo.loanManagement.parsistence.models;
+package com.example.demo.finance.loanManagement.parsistence.models;
 
 import jakarta.persistence.*;
 import lombok.Data;

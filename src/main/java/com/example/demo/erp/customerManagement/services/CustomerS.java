@@ -25,6 +25,20 @@ public interface CustomerS {
 
     void changeStatus(Long id, String status);
 
+    /**
+     * Enable channel-based authentication for a customer
+     * @param id Customer ID
+     * @param channel Channel to enable (web, mobile, ussd)
+     * @param pin PIN to set (will be hashed)
+     * @return ResponseModel with status
+     */
+    ResponseModel enableClientLogin(Long id, String channel, String pin);
+    
+    /**
+     * Legacy method - enables mobile channel by default
+     * @param id Customer ID
+     * @return ResponseModel with status
+     */
     ResponseModel enableClientLogin(Long id);
     
     void deleteCustomer(Long id);

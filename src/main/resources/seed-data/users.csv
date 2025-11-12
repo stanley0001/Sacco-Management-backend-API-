@@ -1,0 +1,6 @@
+firstName,lastName,otherName,userName,email,phone,documentNumber,roleName,password,active
+Admin,System,Super,admin,admin@sacco.com,254700000000,00000000,ADMIN,Admin@123,true
+John,Mwangi,Kamau,jmwangi,john.mwangi@sacco.com,254701234567,12345678,MANAGER,Password@123,true
+Jane,Wanjiku,Njeri,jwanjiku,jane.wanjiku@sacco.com,254702345678,23456789,TELLER,Password@123,true
+Peter,Otieno,Omondi,potieno,peter.otieno@sacco.com,254703456789,34567890,LOAN_OFFICER,Password@123,true
+Mary,Akinyi,Adhiambo,makinyi,mary.akinyi@sacco.com,254704567890,45678901,ACCOUNTANT,Password@123,true

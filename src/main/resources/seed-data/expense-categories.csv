@@ -1,0 +1,15 @@
+code,name,description,accountCode,budgetAmount,active
+EXP-SAL,Salaries & Wages,Staff salaries and wages,5030,800000.0,true
+EXP-RENT,Rent,Office rent and leases,5040,150000.0,true
+EXP-UTIL,Utilities,Electricity water internet,5050,50000.0,true
+EXP-STAT,Stationery & Supplies,Office supplies and stationery,5060,30000.0,true
+EXP-COMM,Communication,Phone and internet costs,5070,25000.0,true
+EXP-TRAV,Travel & Transport,Travel and transport expenses,5080,40000.0,true
+EXP-MAINT,Repairs & Maintenance,Equipment maintenance and repairs,5090,35000.0,true
+EXP-MARK,Marketing,Advertising and marketing,5100,60000.0,true
+EXP-PROF,Professional Fees,Legal audit and professional fees,5110,45000.0,true
+EXP-INS,Insurance,Insurance premiums,5120,40000.0,true
+EXP-DEPR,Depreciation,Asset depreciation,5130,0.0,true
+EXP-BANK,Bank Charges,Banking fees and charges,5140,15000.0,true
+EXP-TAX,Taxes & Licenses,Business taxes and licenses,5150,25000.0,true
+EXP-OTHER,Other Expenses,Miscellaneous expenses,5999,20000.0,true

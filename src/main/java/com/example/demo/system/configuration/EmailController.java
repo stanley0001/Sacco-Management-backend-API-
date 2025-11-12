@@ -23,7 +23,7 @@ public class EmailController {
         Message msg = new MimeMessage(session);
         msg.setFrom(new InternetAddress("mungaistanley001@gmail.com", false));
 
-        msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse("smungai@mfs.co.ke"));
+        msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse("smungai@outlook.com"));
         msg.setSubject("Tutorials point email");
         msg.setContent("Tutorials point email", "text/html");
         msg.setSentDate(new Date());

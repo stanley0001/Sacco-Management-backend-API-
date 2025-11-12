@@ -29,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -50,8 +51,9 @@ public class CustomerService implements CustomerS {
    public final PaymentRepo paymentRepo;
    public final emailRepo emailRepo;
    public final InfoBidApiService communicationService;
+   private final BCryptPasswordEncoder passwordEncoder;
 
-    public CustomerService(CustomerRepo customerRepo, UserService userService, SubscriptionService subscriptionService, ApplicationRepo applicationRepo, BankAccountRepo bankAccountRepo, PaymentTransactionRepo transactionsRepo, PaymentRepo paymentRepo, com.example.demo.erp.communication.parsitence.repositories.emailRepo emailRepo, InfoBidApiService communicationService) {
+    public CustomerService(CustomerRepo customerRepo, UserService userService, SubscriptionService subscriptionService, ApplicationRepo applicationRepo, BankAccountRepo bankAccountRepo, PaymentTransactionRepo transactionsRepo, PaymentRepo paymentRepo, com.example.demo.erp.communication.parsitence.repositories.emailRepo emailRepo, InfoBidApiService communicationService, BCryptPasswordEncoder passwordEncoder) {
         this.customerRepo = customerRepo;
         this.userService = userService;
         this.subscriptionService = subscriptionService;
@@ -61,6 +63,7 @@ public class CustomerService implements CustomerS {
         this.paymentRepo = paymentRepo;
         this.emailRepo = emailRepo;
         this.communicationService = communicationService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Customer saveCustomer(Customer customer) {
@@ -73,31 +76,90 @@ public class CustomerService implements CustomerS {
         return client;
     }
 
-    public ResponseModel enableClientLogin(Long clientId){
-        Customer client=customerRepo.findById(clientId).get();
+    /**
+     * Enable channel-based authentication for a customer
+     * This method NO LONGER creates a Users entity - authentication is stored in Customer entity
+     * 
+     * @param clientId Customer ID
+     * @param channel Channel to enable (web, mobile, ussd)
+     * @param pin PIN to set (will be hashed)
+     * @return ResponseModel with status
+     */
+    public ResponseModel enableClientLogin(Long clientId, String channel, String pin){
         ResponseModel response=new ResponseModel();
-            Users user=new Users();
-            user.setActive(Boolean.TRUE);
-            user.setUserName(client.getEmail());
-            user.setEmail(client.getEmail());
-            user.setCreatedAt(LocalDate.now());
-            user.setFirstName(client.getFirstName());
-            user.setLastName(client.getLastName());
-            user.setDocumentNumber(client.getDocumentNumber());
-            user.setPhone(client.getPhoneNumber());
-            user.setRoleId("5");
-            try {
-                userService.saveUser(user);
-                response.setStatus(HttpStatus.OK);
-                response.setMessage("Client enabled please proceed");
-            }catch (Exception e){
-                response.setStatus(HttpStatus.BAD_REQUEST);
-                response.setErrors("Error encountered: "+e.getMessage());
-                log.warn("Error Enabling client login: {}",e.getMessage());
+        
+        try {
+            Customer client = customerRepo.findById(clientId)
+                .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + clientId));
+            
+            // Generate temporary PIN if not provided
+            String pinToUse = (pin != null && !pin.isEmpty()) ? pin : generateTemporaryPin();
+            String hashedPin = passwordEncoder.encode(pinToUse);
+            
+            // Enable the specified channel
+            switch (channel.toLowerCase()) {
+                case "web":
+                    client.setWebLogin(client.getEmail() != null ? client.getEmail() : client.getPhoneNumber());
+                    client.setWebPinHash(hashedPin);
+                    client.setWebChannelEnabled(true);
+                    client.setWebFailedAttempts(0);
+                    log.info("Web channel enabled for customer {}", clientId);
+                    break;
+                    
+                case "mobile":
+                    client.setMobileLogin(client.getPhoneNumber());
+                    client.setMobilePinHash(hashedPin);
+                    client.setMobileChannelEnabled(true);
+                    client.setMobileFailedAttempts(0);
+                    log.info("Mobile channel enabled for customer {}", clientId);
+                    break;
+                    
+                case "ussd":
+                    client.setUssdLogin(client.getPhoneNumber());
+                    client.setUssdPinHash(hashedPin);
+                    client.setUssdChannelEnabled(true);
+                    client.setUssdFailedAttempts(0);
+                    log.info("USSD channel enabled for customer {}", clientId);
+                    break;
+                    
+                default:
+                    // Enable mobile by default if channel not specified
+                    client.setMobileLogin(client.getPhoneNumber());
+                    client.setMobilePinHash(hashedPin);
+                    client.setMobileChannelEnabled(true);
+                    client.setMobileFailedAttempts(0);
+                    log.info("Mobile channel (default) enabled for customer {}", clientId);
             }
-
-            return response;
-
+            
+            customerRepo.save(client);
+            
+            response.setStatus(HttpStatus.OK);
+            response.setMessage("Client " + channel + " channel enabled successfully. PIN: " + pinToUse);
+            
+            // TODO: Send PIN via SMS/Email to customer
+            // smsService.send(client.getPhoneNumber(), "Your PIN is: " + pinToUse);
+            
+        } catch (Exception e){
+            response.setStatus(HttpStatus.BAD_REQUEST);
+            response.setErrors("Error enabling client login: " + e.getMessage());
+            log.error("Error enabling client login for customer {}: {}", clientId, e.getMessage(), e);
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Legacy method for backward compatibility - enables mobile channel by default
+     */
+    public ResponseModel enableClientLogin(Long clientId){
+        return enableClientLogin(clientId, "mobile", null);
+    }
+    
+    /**
+     * Generate a temporary 4-digit PIN
+     */
+    private String generateTemporaryPin() {
+        return String.format("%04d", new java.util.Random().nextInt(10000));
     }
 
     public ResponseModel findAll(int page,int size) {

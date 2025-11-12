@@ -8,6 +8,7 @@ import com.example.demo.finance.banking.parsitence.repositories.BankAccountRepo;
 import com.example.demo.finance.loanManagement.parsistence.entities.LoanAccount;
 import com.example.demo.finance.loanManagement.parsistence.entities.LoanStandingOrder;
 import com.example.demo.finance.loanManagement.parsistence.entities.loanTransactions;
+import com.example.demo.finance.loanManagement.parsistence.entities.loanTransactions;
 import com.example.demo.finance.loanManagement.parsistence.repositories.LoanAccountRepo;
 import com.example.demo.finance.loanManagement.parsistence.repositories.LoanStandingOrderRepository;
 import com.example.demo.system.entities.GlobalConfig;

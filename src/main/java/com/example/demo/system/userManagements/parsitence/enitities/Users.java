@@ -25,6 +25,9 @@ public class Users  {
     private String branchCode; // For branch-level filtering
     private LocalDate createdAt;
     private LocalDate updatedAt;
+    
+    @Transient // Not persisted to database, calculated on retrieval
+    private String roleName; // Role name for display purposes
 
     public Users() {
     }
@@ -180,6 +183,14 @@ public class Users  {
 
     public void setBranchCode(String branchCode) {
         this.branchCode = branchCode;
+    }
+    
+    public String getRoleName() {
+        return roleName;
+    }
+    
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
     }
 
     @Override

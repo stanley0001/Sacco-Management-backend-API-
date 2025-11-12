@@ -1,0 +1,6 @@
+code,name,description,accountCode,depreciationMethod,depreciationRate,usefulLife,active
+ASSET-FURN,Furniture & Fixtures,Office furniture and fixtures,1051,STRAIGHT_LINE,12.5,8,true
+ASSET-COMP,Computer Equipment,Computers and IT equipment,1052,STRAIGHT_LINE,25.0,4,true
+ASSET-OFFC,Office Equipment,Printers scanners and office equipment,1053,STRAIGHT_LINE,20.0,5,true
+ASSET-VEH,Vehicles,Company vehicles and transportation,1054,DECLINING_BALANCE,25.0,4,true
+ASSET-BUILD,Buildings,Office buildings and property,1055,STRAIGHT_LINE,2.0,50,true

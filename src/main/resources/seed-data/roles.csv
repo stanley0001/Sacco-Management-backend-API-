@@ -1,0 +1,7 @@
+roleName,description
+ADMIN,Full system access with all permissions
+MANAGER,Branch management and supervisory access
+TELLER,Customer service and transaction processing
+LOAN_OFFICER,Loan processing approval and management
+ACCOUNTANT,Financial reporting and reconciliation
+USER,Basic read-only user access

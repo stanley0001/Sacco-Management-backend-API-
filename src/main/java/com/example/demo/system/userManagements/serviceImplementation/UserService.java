@@ -90,7 +90,21 @@ public class UserService implements UserDetailsService {
         return userRepo.save(user);
     }
     public List<Users> getAll() {
-        return userRepo.findAll();
+        List<Users> users = userRepo.findAll();
+        // Populate roleName for each user
+        users.forEach(user -> {
+            if (user.getRoleId() != null && !user.getRoleId().isEmpty()) {
+                try {
+                    Roles role = getRoleById(user.getRoleId());
+                    if (role != null && role.getRoleName() != null) {
+                        user.setRoleName(String.valueOf(role.getRoleName()));
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not find role for user {}: {}", user.getUserName(), e.getMessage());
+                }
+            }
+        });
+        return users;
     }
     public Optional<Users> findByEmail(String email) {
         return userRepo.findByemail(email);

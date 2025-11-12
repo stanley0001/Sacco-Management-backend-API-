@@ -2,6 +2,7 @@ package com.example.demo.finance.loanManagement.services;
 
 import com.example.demo.erp.customerManagement.parsistence.entities.Customer;
 import com.example.demo.erp.customerManagement.parsistence.repositories.CustomerRepository;
+import com.example.demo.erp.customerManagement.services.CustomerCreationService;
 import com.example.demo.finance.loanManagement.parsistence.repositories.ProductRepo;
 import com.example.demo.finance.loanManagement.dto.LoanBookUploadDTO;
 import com.example.demo.finance.loanManagement.parsistence.entities.Products;
@@ -24,6 +25,7 @@ public class LoanBookValidationService {
     
     private final CustomerRepository customerRepository;
     private final ProductRepo productRepo;
+    private final CustomerCreationService customerCreationService;
     
     private static final Pattern PHONE_PATTERN = Pattern.compile("^(?:254|\\+254|0)?[17]\\d{8}$");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
@@ -330,9 +332,62 @@ public class LoanBookValidationService {
     }
 
     private Optional<Customer> createCustomerFromLoanUpload(LoanBookUploadDTO loan) {
-        Customer customer = fromLoanUpload(loan);
-        customer = customerRepository.save(customer);
-        return Optional.of(customer);
+        try {
+            // Parse customer name - handle single name, two names, or three names
+            String firstName = "N/A";
+            String middleName = null;
+            String lastName = "N/A";
+            
+            if (loan.getCustomerName() != null && !loan.getCustomerName().trim().isEmpty()) {
+                String[] parts = loan.getCustomerName().trim().split("\\s+");
+                
+                if (parts.length == 1) {
+                    firstName = parts[0];
+                    lastName = parts[0];
+                } else if (parts.length == 2) {
+                    firstName = parts[0];
+                    lastName = parts[1];
+                } else if (parts.length >= 3) {
+                    firstName = parts[0];
+                    middleName = parts[1];
+                    lastName = String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length));
+                }
+            }
+            
+            // Build creation request using centralized service
+            CustomerCreationService.CustomerCreationRequest request = 
+                CustomerCreationService.CustomerCreationRequest.builder()
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .middleName(middleName)
+                    .phoneNumber(loan.getPhoneNumber())
+                    .documentNumber(loan.getCustomerId())
+                    .email(loan.getEmail())
+                    .branchCode(loan.getBranchCode())
+                    .createdBy("LOAN_VALIDATION")
+                    .source(CustomerCreationService.CreationSource.LOAN_UPLOAD)
+                    .sourceReference(loan.getLoanId())
+                    .build();
+            
+            // Create customer using centralized service (includes bank account creation)
+            CustomerCreationService.CustomerCreationResponse response = 
+                customerCreationService.createCustomer(request);
+            
+            if (!response.isSuccess()) {
+                log.error("Failed to create customer during validation: {}", response.getMessage());
+                return Optional.empty();
+            }
+            
+            log.info("Created customer during validation via centralized service: ID={}, MemberNumber={}, BankAccounts={}", 
+                response.getCustomer().getId(), 
+                response.getMemberNumber(),
+                response.getBankAccounts().size());
+            
+            return Optional.of(response.getCustomer());
+        } catch (Exception e) {
+            log.error("Error creating customer from loan upload: {}", e.getMessage(), e);
+            return Optional.empty();
+        }
     }
 
     private Optional<Products> createProductFromLoanUpload(LoanBookUploadDTO loan) {
@@ -391,27 +446,7 @@ public class LoanBookValidationService {
         }
     }
 
-    public static Customer fromLoanUpload(LoanBookUploadDTO upload) {
-        Customer customer = new Customer();
-
-        if (upload.getCustomerName() != null && !upload.getCustomerName().trim().isEmpty()) {
-            String[] parts = upload.getCustomerName().trim().split(" ");
-            customer.setFirstName(parts.length > 0 ? parts[0] : upload.getCustomerName());
-            customer.setMiddleName(parts.length > 2 ? parts[1] : null);
-            customer.setLastName(parts.length > 2 ? parts[2] : (parts.length > 1 ? parts[1] : null));
-        }
-
-        customer.setPhoneNumber(upload.getPhoneNumber());
-        customer.setEmail(upload.getEmail());
-        customer.setExternalId(upload.getCustomerId());
-        customer.setBranchCode(upload.getBranchCode());
-        customer.setCreatedAt(LocalDateTime.now());
-        customer.setAccountStatusFlag(true);
-        customer.setAccountStatus("ACTIVE");
-        customer.setStatus("ACTIVE");
-
-        return customer;
-    }
+    // Removed obsolete fromLoanUpload method - now using centralized CustomerCreationService
 
     private boolean isEmpty(String value) {
         return value == null || value.trim().isEmpty();

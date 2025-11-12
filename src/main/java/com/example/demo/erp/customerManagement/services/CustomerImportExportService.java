@@ -28,6 +28,7 @@ import java.util.List;
 public class CustomerImportExportService {
 
     private final CustomerRepo customerRepo;
+    private final CustomerCreationService customerCreationService;
 
     /**
      * Import customers from Excel or CSV file
@@ -62,23 +63,66 @@ public class CustomerImportExportService {
             for (int i = 0; i < customers.size(); i++) {
                 try {
                     Customer customer = customers.get(i);
-                    validateCustomer(customer, result, i + 2); // +2 because row 1 is header, array is 0-indexed
                     
-                    if (result.getErrors().size() > failed) {
+                    // Basic validation
+                    if (customer.getFirstName() == null || customer.getFirstName().trim().isEmpty()) {
                         failed++;
+                        result.getErrors().add("Row " + (i + 2) + ": First name is required");
+                        continue;
+                    }
+                    if (customer.getPhoneNumber() == null || customer.getPhoneNumber().trim().isEmpty()) {
+                        failed++;
+                        result.getErrors().add("Row " + (i + 2) + ": Phone number is required");
+                        continue;
+                    }
+                    if (customer.getDocumentNumber() == null || customer.getDocumentNumber().trim().isEmpty()) {
+                        failed++;
+                        result.getErrors().add("Row " + (i + 2) + ": Document number is required");
                         continue;
                     }
 
-                    customerRepo.save(customer);
-                    successful++;
-
-                    // Flush every batch
-                    if (i % batchSize == 0 && i > 0) {
-                        log.info("Imported {} customers", i);
+                    // Use centralized customer creation service
+                    CustomerCreationService.CustomerCreationRequest request = CustomerCreationService.CustomerCreationRequest.builder()
+                        .firstName(customer.getFirstName())
+                        .lastName(customer.getLastName())
+                        .middleName(customer.getMiddleName())
+                        .phoneNumber(customer.getPhoneNumber())
+                        .documentNumber(customer.getDocumentNumber())
+                        .email(customer.getEmail())
+                        .address(customer.getAddress())
+                        .occupation(customer.getOccupation())
+                        .dob(customer.getDob())
+                        .maritalStatus(customer.getMaritalStatus())
+                        .nextOfKin(customer.getNextOfKin())
+                        .nextOfKinPhone(customer.getNextOfKinPhone())
+                        .nextOfKinRelationship(customer.getNextOfKinRelationship())
+                        .createdBy(importedBy)
+                        .source(CustomerCreationService.CreationSource.CUSTOMER_UPLOAD)
+                        .sourceReference(fileName + ":Row" + (i + 2))
+                        .build();
+                    
+                    CustomerCreationService.CustomerCreationResponse response = customerCreationService.createCustomer(request);
+                    
+                    if (response.isSuccess()) {
+                        successful++;
+                        // Flush every batch
+                        if (i % batchSize == 0 && i > 0) {
+                            log.info("Imported {} customers", i);
+                        }
+                    } else {
+                        failed++;
+                        result.getErrors().add("Row " + (i + 2) + ": " + response.getMessage());
                     }
+                } catch (IllegalArgumentException e) {
+                    // Handle duplicate or validation errors gracefully
+                    failed++;
+                    String errorMsg = e.getMessage();
+                    result.getErrors().add("Row " + (i + 2) + ": " + errorMsg);
+                    log.warn("Import row {} failed: {}", (i + 2), errorMsg);
                 } catch (Exception e) {
                     failed++;
                     result.getErrors().add("Row " + (i + 2) + ": " + e.getMessage());
+                    log.error("Unexpected error importing row {}: {}", (i + 2), e.getMessage());
                 }
             }
 
@@ -88,9 +132,13 @@ public class CustomerImportExportService {
             
             log.info("Import completed: {} successful, {} failed", successful, failed);
 
+        } catch (IOException e) {
+            log.error("Error reading file", e);
+            result.getErrors().add("File reading error: " + e.getMessage());
+            result.setFailed(result.getFailed() + 1);
         } catch (Exception e) {
-            log.error("Error importing customers", e);
-            result.getErrors().add("File processing error: " + e.getMessage());
+            log.error("Unexpected error importing customers", e);
+            result.getErrors().add("Processing error: " + e.getMessage());
             result.setFailed(result.getFailed() + 1);
         }
 
@@ -387,14 +435,8 @@ public class CustomerImportExportService {
             // Try parsing as LocalDate (YYYY-MM-DD)
             return LocalDate.parse(dateStr);
         } catch (Exception e) {
-            try {
-                // Try parsing as different formats
-                // Add more formats as needed
-                return LocalDate.parse(dateStr);
-            } catch (Exception ex) {
-                log.warn("Could not parse date: {}", dateStr);
-                return null;
-            }
+            log.warn("Could not parse date: {}", dateStr);
+            return null;
         }
     }
 }

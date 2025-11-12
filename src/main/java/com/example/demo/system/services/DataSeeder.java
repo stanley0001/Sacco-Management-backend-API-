@@ -52,6 +52,7 @@ public class DataSeeder implements CommandLineRunner {
     private final LoanAccountRepo loanAccountRepo;
     private final TransactionsRepo transactionsRepo;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final CsvDataLoader csvLoader;
 
     public DataSeeder(CustomerRepo customerRepo, userRepo userRepository, rolesRepo rolesRepository,
                       permissionsRepo permissionsRepository, securityRepo securityRepository, ProductRepo productRepo, 
@@ -59,7 +60,8 @@ public class DataSeeder implements CommandLineRunner {
                       SavingsAccountRepository savingsAccountRepository,
                       SavingsTransactionRepository savingsTransactionRepository,
                       ApplicationRepo applicationRepo, LoanAccountRepo loanAccountRepo,
-                      TransactionsRepo transactionsRepo, BCryptPasswordEncoder passwordEncoder) {
+                      TransactionsRepo transactionsRepo, BCryptPasswordEncoder passwordEncoder,
+                      CsvDataLoader csvLoader) {
         this.customerRepo = customerRepo;
         this.userRepository = userRepository;
         this.rolesRepository = rolesRepository;
@@ -73,6 +75,7 @@ public class DataSeeder implements CommandLineRunner {
         this.loanAccountRepo = loanAccountRepo;
         this.transactionsRepo = transactionsRepo;
         this.passwordEncoder = passwordEncoder;
+        this.csvLoader = csvLoader;
     }
 
     @Override
@@ -117,7 +120,61 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private List<rolePermissions> seedPermissions() {
-        logger.info("Seeding permissions...");
+        logger.info("Seeding permissions from CSV...");
+        List<rolePermissions> permissions = new ArrayList<>();
+
+        // Load permissions from CSV
+        List<Map<String, String>> csvData = csvLoader.loadCsvData("permissions.csv");
+        
+        if (csvData.isEmpty()) {
+            logger.warn("No permissions data found in CSV, using fallback hardcoded data");
+            return seedPermissionsHardcoded();
+        }
+
+        for (Map<String, String> row : csvData) {
+            try {
+                String permName = csvLoader.getString(row, "name", "");
+                
+                // Check if permission already exists
+                try {
+                    Optional<rolePermissions> existingPerm = permissionsRepository.findByName(permName);
+                    if (existingPerm.isPresent()) {
+                        logger.debug("Permission {} already exists, skipping", permName);
+                        permissions.add(existingPerm.get());
+                        continue;
+                    }
+                } catch (org.springframework.dao.IncorrectResultSizeDataAccessException ex) {
+                    // Handle duplicate permissions - get all and use the first one
+                    logger.warn("Multiple permissions found with name {}, using first one", permName);
+                    List<rolePermissions> duplicates = permissionsRepository.findAll().stream()
+                            .filter(p -> permName.equals(p.getName()))
+                            .toList();
+                    if (!duplicates.isEmpty()) {
+                        permissions.add(duplicates.get(0));
+                        continue;
+                    }
+                }
+                
+                rolePermissions permission = new rolePermissions();
+                permission.setName(permName);
+                permission.setValue(csvLoader.getString(row, "value", ""));
+                permission.setPermissionStatus(csvLoader.getString(row, "status", "ACTIVE"));
+                permission.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(30)));
+                permission.setAddedBy("system");
+                permission.setIpAddress("127.0.0.1");
+                permissions.add(permissionsRepository.save(permission));
+                logger.debug("Created permission: {}", permName);
+            } catch (Exception e) {
+                logger.error("Error seeding permission: {}", row.get("name"), e);
+            }
+        }
+
+        logger.info("Created {} permissions from CSV", permissions.size());
+        return permissions;
+    }
+
+    private List<rolePermissions> seedPermissionsHardcoded() {
+        logger.info("Using hardcoded permissions as fallback");
         List<rolePermissions> permissions = new ArrayList<>();
 
         String[][] permissionData = {
@@ -316,25 +373,66 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private List<Roles> seedRoles() {
-        logger.info("Seeding roles...");
+        logger.info("Seeding roles from CSV...");
         List<Roles> roles = new ArrayList<>();
 
-        String[] roleNames = {"ADMIN", "MANAGER", "TELLER", "LOAN_OFFICER", "ACCOUNTANT", "USER"};
-        String[] descriptions = {
-                "Full system access",
-                "Branch management access",
-                "Customer service and transactions",
-                "Loan processing and approval",
-                "Financial reporting and reconciliation",
-                "Basic user access"
-        };
+        // Load roles from CSV
+        List<Map<String, String>> csvData = csvLoader.loadCsvData("roles.csv");
+        
+        if (csvData.isEmpty()) {
+            logger.warn("No roles data found in CSV, using fallback");
+            String[] roleNames = {"ADMIN", "MANAGER", "TELLER", "LOAN_OFFICER", "ACCOUNTANT", "USER"};
+            String[] descriptions = {
+                    "Full system access",
+                    "Branch management access",
+                    "Customer service and transactions",
+                    "Loan processing and approval",
+                    "Financial reporting and reconciliation",
+                    "Basic user access"
+            };
 
-        for (int i = 0; i < roleNames.length; i++) {
-            Roles role = new Roles();
-            role.setRoleName(roleNames[i]);
-            role.setDescription(descriptions[i]);
-            role.setCreatedAt(LocalDate.now().minusDays(random.nextInt(365)).atStartOfDay());
-            roles.add(rolesRepository.save(role));
+            for (int i = 0; i < roleNames.length; i++) {
+                Roles role = new Roles();
+                role.setRoleName(roleNames[i]);
+                role.setDescription(descriptions[i]);
+                role.setCreatedAt(LocalDate.now().minusDays(random.nextInt(365)).atStartOfDay());
+                roles.add(rolesRepository.save(role));
+            }
+        } else {
+            for (Map<String, String> row : csvData) {
+                try {
+                    String roleName = csvLoader.getString(row, "roleName", "");
+                    
+                    // Check if role already exists
+                    try {
+                        Optional<Roles> existingRole = rolesRepository.findByRoleName(roleName);
+                        if (existingRole.isPresent()) {
+                            logger.info("Role {} already exists, skipping", roleName);
+                            roles.add(existingRole.get());
+                            continue;
+                        }
+                    } catch (org.springframework.dao.IncorrectResultSizeDataAccessException ex) {
+                        // Handle duplicate roles - get all and use the first one
+                        logger.warn("Multiple roles found with name {}, using first one", roleName);
+                        List<Roles> duplicates = rolesRepository.findAll().stream()
+                                .filter(r -> roleName.equals(r.getRoleName()))
+                                .toList();
+                        if (!duplicates.isEmpty()) {
+                            roles.add(duplicates.get(0));
+                            continue;
+                        }
+                    }
+                    
+                    Roles role = new Roles();
+                    role.setRoleName(roleName);
+                    role.setDescription(csvLoader.getString(row, "description", ""));
+                    role.setCreatedAt(LocalDate.now().minusDays(random.nextInt(365)).atStartOfDay());
+                    roles.add(rolesRepository.save(role));
+                    logger.info("Created role: {}", roleName);
+                } catch (Exception e) {
+                    logger.error("Error seeding role: {}", row.get("roleName"), e);
+                }
+            }
         }
 
         logger.info("Created {} roles", roles.size());
@@ -517,23 +615,98 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private List<Users> seedUsers(List<Roles> roles) {
-        logger.info("Seeding users...");
+        logger.info("Seeding users from CSV...");
         List<Users> users = new ArrayList<>();
 
-        // Create admin user
-        Users admin = new Users();
-        admin.setFirstName("Admin");
-        admin.setLastName("System");
-        admin.setOtherName("Super");
-        admin.setUserName("admin");
-        admin.setEmail("admin@sacco.com");
-        admin.setPhone("254700000000");
-        admin.setDocumentNumber("00000000");
-        admin.setRoleId(roles.get(0).getId().toString());
-        admin.setActive(true);
-        admin.setCreatedAt(LocalDate.now().minusYears(1));
-        admin.setUpdatedAt(LocalDate.now());
-        users.add(userRepository.save(admin));
+        // Create role map for lookup
+        Map<String, Roles> roleMap = new HashMap<>();
+        for (Roles role : roles) {
+            roleMap.put(role.getRoleName(), role);
+        }
+
+        // Load users from CSV
+        List<Map<String, String>> csvData = csvLoader.loadCsvData("users.csv");
+        
+        if (csvData.isEmpty()) {
+            logger.warn("No users data found in CSV, creating default admin");
+            // Check if admin already exists
+            Optional<Users> existingAdmin = userRepository.findByEmail("admin@sacco.com");
+            if (existingAdmin.isPresent()) {
+                logger.info("Admin user already exists, skipping creation");
+                users.add(existingAdmin.get());
+            } else {
+                // Create admin user as fallback
+                Users admin = new Users();
+                admin.setFirstName("Admin");
+                admin.setLastName("System");
+                admin.setOtherName("Super");
+                admin.setUserName("admin");
+                admin.setEmail("admin@sacco.com");
+                admin.setPhone("254700000000");
+                admin.setDocumentNumber("00000000");
+                admin.setRoleId(roles.get(0).getId().toString());
+                admin.setActive(true);
+                admin.setCreatedAt(LocalDate.now().minusYears(1));
+                admin.setUpdatedAt(LocalDate.now());
+                users.add(userRepository.save(admin));
+                logger.info("Created default admin user");
+            }
+        } else {
+            for (Map<String, String> row : csvData) {
+                try {
+                    String email = csvLoader.getString(row, "email", "");
+                    String userName = csvLoader.getString(row, "userName", "");
+                    
+                    // Check if user already exists by email or username
+                    Optional<Users> existingUser = userRepository.findByEmail(email);
+                    if (existingUser.isEmpty() && userName != null && !userName.isEmpty()) {
+                        existingUser = userRepository.findByUserName(userName);
+                    }
+                    
+                    if (existingUser.isPresent()) {
+                        logger.info("User {} already exists, skipping creation", userName);
+                        users.add(existingUser.get());
+                        // Store user ID for password processing
+                        row.put("userId", existingUser.get().getId().toString());
+                        continue;
+                    }
+                    
+                    Users user = new Users();
+                    user.setFirstName(csvLoader.getString(row, "firstName", ""));
+                    user.setLastName(csvLoader.getString(row, "lastName", ""));
+                    user.setOtherName(csvLoader.getString(row, "otherName", ""));
+                    user.setUserName(userName);
+                    user.setEmail(email);
+                    user.setPhone(csvLoader.getString(row, "phone", ""));
+                    user.setDocumentNumber(csvLoader.getString(row, "documentNumber", ""));
+                    
+                    // Get role from roleName
+                    String roleName = csvLoader.getString(row, "roleName", "USER");
+                    Roles role = roleMap.get(roleName);
+                    if (role != null) {
+                        user.setRoleId(role.getId().toString());
+                    } else {
+                        logger.warn("Role {} not found for user {}, using first available role", roleName, user.getUserName());
+                        user.setRoleId(roles.get(0).getId().toString());
+                    }
+                    
+                    user.setActive(csvLoader.getBoolean(row, "active", true));
+                    user.setCreatedAt(LocalDate.now().minusMonths(6));
+                    user.setUpdatedAt(LocalDate.now());
+                    
+                    users.add(userRepository.save(user));
+                    logger.info("Created user: {}", userName);
+                    
+                    // Store password for later processing
+                    String password = csvLoader.getString(row, "password", "Password@123");
+                    row.put("userId", user.getId().toString());
+                    row.put("password", password);
+                    
+                } catch (Exception e) {
+                    logger.error("Error seeding user: {}", row.get("userName"), e);
+                }
+            }
+        }
 
         // Create 20 random users
         for (int i = 0; i < 20; i++) {

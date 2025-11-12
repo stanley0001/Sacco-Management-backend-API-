@@ -162,11 +162,19 @@ public class CommunicationService {
            // theEmail(variable);
             //changing email communication to whatsapp communication
             Customer customer=customerRepo.findByEmail(mail.getRecipient());
-            String requestParams="?instanceId=109266945127952&to="+customer.getPhoneNumber()+"&message="+mail.getMessage();
-            UriComponents components = UriComponentsBuilder.fromHttpUrl("http://192.168.43.63:30001/communication/sendWhatsAppMessage"+requestParams).pathSegment(null).build();
-            ResponseEntity responseEntity = postEntity(components, null, null, String.class);
-        }catch (Exception e){
-            log.warn("Error sending communication: {}",e.getMessage());
+            if (customer != null && customer.getPhoneNumber() != null) {
+                String requestParams="?instanceId=109266945127952&to="+customer.getPhoneNumber()+"&message="+mail.getMessage();
+                UriComponents components = UriComponentsBuilder.fromHttpUrl("http://192.168.43.63:30001/communication/sendWhatsAppMessage"+requestParams).pathSegment(null).build();
+                ResponseEntity responseEntity = postEntity(components, null, null, String.class);
+                log.debug("WhatsApp message sent to {}", customer.getPhoneNumber());
+            } else {
+                log.debug("Customer not found or phone number missing for email: {}", mail.getRecipient());
+            }
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            // Connection timeout - WhatsApp service unavailable (suppress noisy logs)
+            log.debug("WhatsApp service unavailable: {}", e.getMessage());
+        } catch (Exception e){
+            log.warn("Error sending communication to {}: {}", mail.getRecipient(), e.getMessage());
         }
 
 
@@ -182,6 +190,36 @@ public class CommunicationService {
 
     public List<Email> getOutboxByEmailOrderByIdDesc(String email) {
         return emailRepo.findByRecipientOrderByIdDesc(email);
+    }
+
+    /**
+     * Get communications for a specific customer
+     * @param customerId Customer ID
+     * @param limit Maximum number of records to return
+     * @return List of recent communications for the customer
+     */
+    public List<Email> getOutboxByCustomerId(Long customerId, int limit) {
+        try {
+            // Find customer by ID
+            Customer customer = customerRepo.findById(customerId).orElse(null);
+            if (customer == null) {
+                log.warn("Customer not found: {}", customerId);
+                return new java.util.ArrayList<>();
+            }
+            
+            // Get communications by customer's email, ordered by most recent first
+            List<Email> communications = emailRepo.findByRecipientOrderByIdDesc(customer.getEmail());
+            
+            // Limit results to specified number
+            if (communications.size() > limit) {
+                return communications.subList(0, limit);
+            }
+            
+            return communications;
+        } catch (Exception e) {
+            log.error("Error fetching communications for customer {}: {}", customerId, e.getMessage());
+            return new java.util.ArrayList<>();
+        }
     }
 
     public List<SmsResponse> sendBulkSMS(bulkSmsModel customBulkSms) throws ApiException, IOException {

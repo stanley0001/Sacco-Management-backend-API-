@@ -1,0 +1,6 @@
+employeeCode,firstName,lastName,middleName,nationalId,phone,email,position,department,basicSalary,housingAllowance,transportAllowance,otherAllowances,bankName,bankBranch,status
+EMP001,John,Doe,Mwangi,12345678,0712345678,john.doe@company.com,Manager,Administration,80000.0,20000.0,10000.0,5000.0,KCB Bank,Nairobi Branch,ACTIVE
+EMP002,Jane,Smith,Wanjiku,23456789,0723456789,jane.smith@company.com,Accountant,Finance,65000.0,15000.0,8000.0,3000.0,Equity Bank,Westlands,ACTIVE
+EMP003,Peter,Kamau,Njoroge,34567890,0734567890,peter.kamau@company.com,Loan Officer,Loans,55000.0,12000.0,7000.0,2000.0,Cooperative Bank,CBD Branch,ACTIVE
+EMP004,Mary,Akinyi,Otieno,45678901,0745678901,mary.akinyi@company.com,Customer Service,Operations,45000.0,10000.0,5000.0,2000.0,NCBA Bank,Thika Road,ACTIVE
+EMP005,David,Kipchoge,Korir,56789012,0756789012,david.kipchoge@company.com,IT Officer,Technology,70000.0,18000.0,9000.0,4000.0,Standard Chartered,Upper Hill,ACTIVE

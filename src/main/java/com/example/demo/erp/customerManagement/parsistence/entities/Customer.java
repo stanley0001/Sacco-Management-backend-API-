@@ -61,10 +61,36 @@ public class Customer implements Serializable {
     @JoinColumn(name = "product_id", nullable = true)
     private LoanBookUpload loanBookUpload;
 
-    // Mobile banking fields
+    // Channel-specific authentication fields
     private String memberNumber;
-    private String pinHash;
+    
+    // Web Channel Authentication
+    private String webLogin; // Username for web portal
+    private String webPinHash; // Hashed PIN for web
+    private Boolean webChannelEnabled = false;
+    private Integer webFailedAttempts = 0;
+    private LocalDateTime webLastLogin;
+    
+    // Mobile App Authentication
+    private String mobileLogin; // Username for mobile app (usually phone number)
+    private String mobilePinHash; // Hashed PIN for mobile
+    private Boolean mobileChannelEnabled = false;
+    private Integer mobileFailedAttempts = 0;
+    private LocalDateTime mobileLastLogin;
+    
+    // USSD Authentication
+    private String ussdLogin; // Username for USSD (usually phone number)
+    private String ussdPinHash; // Hashed PIN for USSD
+    private Boolean ussdChannelEnabled = false;
+    private Integer ussdFailedAttempts = 0;
+    private LocalDateTime ussdLastLogin;
+    
+    // Legacy fields (kept for backward compatibility)
+    @Deprecated
+    private String pinHash; // Will be migrated to channel-specific pins
+    @Deprecated
     private Integer failedPinAttempts = 0;
+    @Deprecated
     private LocalDateTime lastLogin;
     
     // Additional fields for bulk processing
@@ -103,6 +129,11 @@ public class Customer implements Serializable {
         this.lastName=customerName.length>2?customerName[2]:middleName;
         this.documentNumber=upload.getDocumentNumber();
         this.phoneNumber=upload.getPhoneNumber();
+        
+        // Initialize channel flags
+        this.webChannelEnabled = false;
+        this.mobileChannelEnabled = false;
+        this.ussdChannelEnabled = false;
     }
     /*@OneToMany
     List<BankAccounts> bankAccounts;

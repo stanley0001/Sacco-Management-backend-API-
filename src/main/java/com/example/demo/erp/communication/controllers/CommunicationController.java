@@ -73,11 +73,17 @@ public class CommunicationController {
         return new ResponseEntity<>(contactList,HttpStatus.OK);
     }
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<Email>> getCommunicationsByCustomerId(@PathVariable Long customerId){
-        // For now, return all communications - in a real implementation, 
-        // you'd filter by customer ID
-        List<Email> communications = communicationService.getOutbox();
-        return new ResponseEntity<>(communications, HttpStatus.OK);
+    public ResponseEntity<List<Email>> getCommunicationsByCustomerId(
+            @PathVariable Long customerId,
+            @RequestParam(defaultValue = "5") int limit) {
+        try {
+            List<Email> communications = communicationService.getOutboxByCustomerId(customerId, limit);
+            log.info("Retrieved {} communications for customer {}", communications.size(), customerId);
+            return new ResponseEntity<>(communications, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error fetching communications for customer {}", customerId, e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     
     /**

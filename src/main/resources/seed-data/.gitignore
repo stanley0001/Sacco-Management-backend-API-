@@ -1,0 +1,11 @@
+# Ignore sensitive seed data in production
+# Remove this file to track seed data in version control
+
+# Uncomment to ignore sensitive files:
+# *.csv
+# users.csv
+# employees.csv
+
+# Keep documentation
+!README.md
+!.gitignore

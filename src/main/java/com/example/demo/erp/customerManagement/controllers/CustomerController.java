@@ -6,6 +6,7 @@ import com.example.demo.erp.customerManagement.dto.StatusUpdateDto;
 import com.example.demo.erp.customerManagement.parsistence.entities.Customer;
 import com.example.demo.erp.customerManagement.parsistence.models.ClientInfo;
 import com.example.demo.erp.customerManagement.services.CustomerImportExportService;
+import com.example.demo.erp.customerManagement.services.CustomerCreationService;
 import com.example.demo.erp.customerManagement.services.CustomerS;
 import com.example.demo.finance.banking.parsitence.enitities.BankAccounts;
 import com.example.demo.finance.banking.parsitence.enitities.Payments;
@@ -55,7 +56,7 @@ import java.util.Optional;
 @RequestMapping("api/customers")
 public class CustomerController {
 
-    public  final SubscriptionService subscriptions;
+    public final SubscriptionService subscriptions;
     public final CustomerS customerService;
     public  final UserService userService;
     public final LoanService loanService;
@@ -69,6 +70,7 @@ public class CustomerController {
     public final CustomerImportExportService importExportService;
     private final ProductService productService;
     private final BankingService bankingService;
+    private final CustomerCreationService customerCreationService;
 
     public CustomerController(
             SubscriptionService subscriptions, 
@@ -84,7 +86,8 @@ public class CustomerController {
             WhatsAppService whatsAppService,
             CustomerImportExportService importExportService,
             BankingService bankingService,
-            ProductService productService
+            ProductService productService,
+            CustomerCreationService customerCreationService
     ) {
         this.subscriptions = subscriptions;
         this.customerService = customerService;
@@ -100,15 +103,63 @@ public class CustomerController {
         this.importExportService = importExportService;
         this.bankingService = bankingService;
         this.productService = productService;
+        this.customerCreationService = customerCreationService;
     }
 
-    //creating customers
+    //creating customers using centralized service
     @PostMapping("/create")
-    public ResponseEntity<Customer> createCustomer(@RequestBody Customer customer){
-        Customer customer1=customerService.saveCustomer(customer);
-        bankingService.createBankAccounts(customer1);
-        bankingService.processInitialDepositIfPresent(customer1);
-        return new ResponseEntity<>(customer1, HttpStatus.CREATED);
+    public ResponseEntity<?> createCustomer(
+            @RequestBody Customer customer,
+            Authentication authentication){
+        try {
+            String createdBy = authentication != null ? authentication.getName() : "ADMIN";
+            
+            // Use centralized customer creation service
+            CustomerCreationService.CustomerCreationRequest request = CustomerCreationService.CustomerCreationRequest.builder()
+                .firstName(customer.getFirstName())
+                .lastName(customer.getLastName())
+                .middleName(customer.getMiddleName())
+                .phoneNumber(customer.getPhoneNumber())
+                .documentNumber(customer.getDocumentNumber())
+                .email(customer.getEmail())
+                .address(customer.getAddress())
+                .occupation(customer.getOccupation())
+                .dob(customer.getDob())
+                .maritalStatus(customer.getMaritalStatus())
+                .salary(customer.getSalary())
+                .employmentType(customer.getEmploymentType())
+                .nextOfKin(customer.getNextOfKin())
+                .nextOfKinPhone(customer.getNextOfKinPhone())
+                .nextOfKinRelationship(customer.getNextOfKinRelationship())
+                .nextOfKinDocumentNumber(customer.getNextOfKinDocumentNumber())
+                .branchCode(customer.getBranchCode())
+                .assignedLoanOfficerId(customer.getAssignedLoanOfficerId())
+                .county(customer.getCounty())
+                .createdBy(createdBy)
+                .initialDepositAmount(customer.getInitialDepositAmount())
+                .source(CustomerCreationService.CreationSource.ADMIN_UI)
+                .build();
+            
+            CustomerCreationService.CustomerCreationResponse response = customerCreationService.createCustomer(request);
+            
+            if (response.isSuccess()) {
+                log.info("Customer created successfully: {} with member number: {}", 
+                    response.getCustomer().getId(), response.getMemberNumber());
+                return new ResponseEntity<>(response.getCustomer(), HttpStatus.CREATED);
+            } else {
+                log.error("Failed to create customer: {}", response.getMessage());
+                return new ResponseEntity<>(Map.of(
+                    "success", false,
+                    "error", response.getMessage()
+                ), HttpStatus.BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            log.error("Error creating customer", e);
+            return new ResponseEntity<>(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     //finding customers info
     @GetMapping("all")
@@ -199,10 +250,36 @@ public class CustomerController {
         return new ResponseEntity<>(score,HttpStatus.OK);
     }
 
+    /**
+     * Enable channel-based authentication for a customer
+     * NO LONGER creates a Users entity - authentication stored in Customer entity
+     * 
+     * @param id Customer ID
+     * @param channel Channel to enable: web, mobile, ussd (default: mobile)
+     * @param pin Optional PIN (if not provided, generates temporary PIN)
+     * @return ResponseModel with status and PIN
+     */
     @PostMapping("/enableClientLogin")
-    public ResponseEntity<ResponseModel> enableLogin(@RequestParam("id") Long id){
-        ResponseModel response=customerService.enableClientLogin(id);
-        return new ResponseEntity<>(response,response.getStatus());
+    public ResponseEntity<ResponseModel> enableLogin(
+            @RequestParam("id") Long id,
+            @RequestParam(value = "channel", defaultValue = "mobile") String channel,
+            @RequestParam(value = "pin", required = false) String pin){
+        
+        log.info("Enabling {} channel for customer ID: {}", channel, id);
+        ResponseModel response = customerService.enableClientLogin(id, channel, pin);
+        return new ResponseEntity<>(response, response.getStatus());
+    }
+    
+    /**
+     * Legacy endpoint for backward compatibility - enables mobile channel
+     * @deprecated Use /enableClientLogin with channel parameter instead
+     */
+    @Deprecated
+    @PostMapping("/enableClientLogin/legacy")
+    public ResponseEntity<ResponseModel> enableLoginLegacy(@RequestParam("id") Long id){
+        log.warn("Using deprecated legacy endpoint for customer ID: {}", id);
+        ResponseModel response = customerService.enableClientLogin(id);
+        return new ResponseEntity<>(response, response.getStatus());
     }
     @GetMapping("/dashBoardData")
     public ResponseEntity<DashBoardData> getData(){

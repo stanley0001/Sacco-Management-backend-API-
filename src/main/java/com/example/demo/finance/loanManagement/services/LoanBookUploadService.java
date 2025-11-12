@@ -42,6 +42,7 @@ public class LoanBookUploadService {
     private final ApplicationRepo applicationRepo;
     private final CustomerRepository customerRepository;
     private final SubscriptionRepo subscriptionRepo;
+    private final com.example.demo.erp.customerManagement.services.CustomerCreationService customerCreationService;
     
     // New centralized services
     private final LoanApplicationOrchestrator applicationOrchestrator;
@@ -162,17 +163,27 @@ public class LoanBookUploadService {
             }
         }
         
-        // 1. Create loan application using centralized orchestrator
+        // CRITICAL FIX: Create/Get customer FIRST before creating application
+        // This ensures customer exists with bank accounts before loan application
+        log.info("Step 1: Ensuring customer exists with bank accounts");
+        Customer customer = getOrCreateCustomer(loanDTO);
+        log.info("Customer ready: ID={}, MemberNumber={}, BankAccountsCreated=true", 
+            customer.getId(), customer.getMemberNumber());
+        
+        // 2. Create loan application using centralized orchestrator
+        log.info("Step 2: Creating loan application");
         com.example.demo.finance.loanManagement.dto.LoanApplicationCommand command = buildApplicationCommand(loanDTO);
         com.example.demo.finance.loanManagement.dto.LoanApplicationResponse appResponse = applicationOrchestrator.createApplication(command);
         
         log.info("Loan application created from upload: ID={}, Status={}", 
             appResponse.getApplicationId(), appResponse.getApplicationStatus());
         
-        // 2. Create subscription for the customer with product
-        createSubscriptionForLoan(loanDTO, null); // Pass null for now, will enhance later
+        // 3. Create subscription for the customer with product
+        log.info("Step 3: Creating subscription");
+        createSubscriptionForLoan(loanDTO, null);
         
-        // 3. Book the loan using centralized booking service
+        // 4. Book the loan using centralized booking service
+        log.info("Step 4: Booking loan");
         com.example.demo.finance.loanManagement.dto.LoanBookingCommand bookingCommand = buildBookingCommand(appResponse, loanDTO);
         LoanAccount loanAccount = bookingService.bookLoan(bookingCommand);
         
@@ -989,7 +1000,7 @@ public class LoanBookUploadService {
     }
     
     /**
-     * Get or create customer entity from loan upload DTO
+     * Get or create customer entity from loan upload DTO using centralized service
      * Returns the actual customer entity with database ID
      */
     private Customer getOrCreateCustomer(LoanBookUploadDTO dto) {
@@ -1015,43 +1026,71 @@ public class LoanBookUploadService {
             }
         }
         
-        // If still not found, create new customer
+        // If still not found, create new customer using centralized service
         if (optionalCustomer.isEmpty()) {
-            Customer newCustomer = createCustomerFromDTO(dto);
-            return customerRepository.save(newCustomer);
+            log.info("Customer not found, creating new customer from loan upload: {}", dto.getCustomerId());
+            return createCustomerFromDTOViaCentralizedService(dto);
         }
         
         return optionalCustomer.get();
     }
     
     /**
-     * Create customer entity from loan upload DTO
+     * Create customer entity from loan upload DTO using centralized creation service
      */
-    private Customer createCustomerFromDTO(LoanBookUploadDTO dto) {
-        Customer customer = new Customer();
+    private Customer createCustomerFromDTOViaCentralizedService(LoanBookUploadDTO dto) {
+        // Parse customer name - handle single name, two names, or three names
+        String firstName = "N/A";
+        String middleName = null;
+        String lastName = "N/A";
         
-        // Parse customer name
         if (dto.getCustomerName() != null && !dto.getCustomerName().trim().isEmpty()) {
-            String[] parts = dto.getCustomerName().trim().split(" ");
-            customer.setFirstName(parts.length > 0 ? parts[0] : dto.getCustomerName());
-            customer.setMiddleName(parts.length > 2 ? parts[1] : null);
-            customer.setLastName(parts.length > 2 ? parts[2] : (parts.length > 1 ? parts[1] : null));
+            String[] parts = dto.getCustomerName().trim().split("\\s+");
+            
+            if (parts.length == 1) {
+                // Single name - use as both first and last name
+                firstName = parts[0];
+                lastName = parts[0];
+            } else if (parts.length == 2) {
+                // Two names - first and last
+                firstName = parts[0];
+                lastName = parts[1];
+            } else if (parts.length >= 3) {
+                // Three or more names - first, middle, last
+                firstName = parts[0];
+                middleName = parts[1];
+                // Combine remaining parts as last name
+                lastName = String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length));
+            }
         }
         
-        customer.setPhoneNumber(dto.getPhoneNumber());
-        customer.setEmail(dto.getEmail());
+        // Build creation request
+        com.example.demo.erp.customerManagement.services.CustomerCreationService.CustomerCreationRequest request = 
+            com.example.demo.erp.customerManagement.services.CustomerCreationService.CustomerCreationRequest.builder()
+                .firstName(firstName)
+                .lastName(lastName)
+                .middleName(middleName)
+                .phoneNumber(dto.getPhoneNumber())
+                .documentNumber(dto.getCustomerId()) // Use customer ID as document number
+                .email(dto.getEmail())
+                .branchCode(dto.getBranchCode())
+                .createdBy("LOAN_UPLOAD")
+                .source(com.example.demo.erp.customerManagement.services.CustomerCreationService.CreationSource.LOAN_UPLOAD)
+                .sourceReference(dto.getLoanId())
+                .build();
         
-        // Set external ID and document number from uploaded customer ID
-        customer.setExternalId(dto.getCustomerId());
-        customer.setDocumentNumber(dto.getCustomerId());
+        // Create customer using centralized service
+        com.example.demo.erp.customerManagement.services.CustomerCreationService.CustomerCreationResponse response = 
+            customerCreationService.createCustomer(request);
         
-        customer.setBranchCode(dto.getBranchCode());
-        customer.setCreatedAt(LocalDateTime.now());
-        customer.setAccountStatusFlag(true);
-        customer.setAccountStatus("ACTIVE");
-        customer.setStatus("ACTIVE");
+        if (!response.isSuccess()) {
+            throw new RuntimeException("Failed to create customer from loan upload: " + response.getMessage());
+        }
         
-        return customer;
+        log.info("Created customer via centralized service: ID={}, MemberNumber={}", 
+            response.getCustomer().getId(), response.getMemberNumber());
+        
+        return response.getCustomer();
     }
 
 

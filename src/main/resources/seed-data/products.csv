@@ -1,0 +1,15 @@
+name,code,transactionType,term,timeSpan,interest,minLimit,maxLimit,eligibilityMultiplier,interestStrategy,interestType,mpesaEnabled,allowEarlyRepayment,active,description,shareValue,minShares,maxShares,requireCheckOff,topUp,autoPaymentEnabled,maxAge
+# SAVINGS PRODUCTS
+Share Capital,SHARE_CAP,SAVINGS,12,MONTHS,0,50000,100000,0,SIMPLE_INTEREST,PER_YEAR,true,true,true,Share capital account - minimum 500 shares at KES 100 per share,100,500,1000,,false,false,
+Normal Deposit,NORM_DEP,SAVINGS,12,MONTHS,0,500,999999999,0,SIMPLE_INTEREST,PER_YEAR,true,true,true,Normal savings deposit with minimum monthly contribution of KES 500,,,,false,false,,
+Junior Saving,JUN_SAV,SAVINGS,12,MONTHS,0,0,999999999,0,SIMPLE_INTEREST,PER_YEAR,true,true,true,Savings account for members below 18 years old,,,,false,false,,17
+# LOAN PRODUCTS
+Normal Loan,NORM_LOAN,LOAN,108,MONTHS,14.4,1000,999999999,3.0,REDUCING_BALANCE,PER_MONTH,true,true,true,Standard loan product with reducing balance interest at 14.4% per month. Maximum 9 years repayment period,,,,,false,false,
+Emergency Loan,EMER_LOAN,LOAN,18,MONTHS,14.0,1000,999999999,3.0,REDUCING_BALANCE,PER_MONTH,true,true,true,Quick emergency loan with 14% monthly interest. Maximum 18 months repayment,,,,,false,false,
+Development Loan,DEV_LOAN,LOAN,108,MONTHS,14.0,1000,999999999,3.0,REDUCING_BALANCE,PER_MONTH,true,true,true,Long-term development loan for business and property development,,,,,false,false,
+Top Up Loan,TOPUP_LOAN,LOAN,108,MONTHS,14.0,1000,999999999,3.0,REDUCING_BALANCE,PER_MONTH,true,true,true,Top-up facility for existing loan customers with good repayment history,,,,true,false,
+Education Loan,EDU_LOAN,LOAN,18,MONTHS,14.0,1000,999999999,3.0,REDUCING_BALANCE,PER_MONTH,true,true,true,Education loan for school fees and educational expenses,,,,,false,false,
+Asset Based Loan,ASSET_LOAN,LOAN,24,MONTHS,15.0,1000,150000,3.0,FLAT_RATE,ONCE_TOTAL,true,true,true,Asset-backed loan with flat interest rate. Maximum KES 150000,,,,,false,false,
+Boresha Maisha Loan,BORESHA_LOAN,LOAN,18,MONTHS,15.0,1000,100000,3.0,FLAT_RATE,ONCE_TOTAL,true,true,true,Small business loan with flat rate. Maximum KES 100000,,,,,false,false,
+Salary Advance Loan,SAL_ADV,LOAN,6,MONTHS,10.0,1000,20000,0,FLAT_RATE,ONCE_TOTAL,true,true,true,Short-term salary advance for check-off members. Maximum KES 20000,,,,true,false,true,
+Quickfix Loan,QUICK_FIX,LOAN,2,MONTHS,14.0,500,5000,3.0,FLAT_RATE,ONCE_TOTAL,true,true,true,Ultra-short term loan for quick cash needs. Maximum KES 5000,,,,,false,false,

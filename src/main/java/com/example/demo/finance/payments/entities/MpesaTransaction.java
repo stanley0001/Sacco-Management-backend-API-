@@ -110,7 +110,7 @@ public class MpesaTransaction {
         C2B,
         B2C,
         BALANCE_QUERY,
-        C2B_PAYMENT, REVERSAL
+        C2B_PAYMENT, DEPOSIT, WITHDRAWAL, REVERSAL
     }
     
     public enum TransactionStatus {
